@@ -1,0 +1,6 @@
+Statistics for case: loose xyzt 1
+approach      preparation    loading    closing    size[MB]     points
+mini              2019.54      221.1     260.07        2975  141494434
+Statistics for case: loose xyzt 1
+approach      preparation    loading    closing    size[MB]     points
+mini              2037.77     209.26     277.16        2963  141494434

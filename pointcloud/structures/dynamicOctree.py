@@ -12,26 +12,14 @@ from pointcloud.structures.geometry import dynamicPoint, dynamicCube
 MAX_NUMBITS = 28
 
 class dynamicOctree:
-    def __init__(self, domain, numLevels, numBits):
-        maximumValue = max(domain)
-        minimumValue = min(domain)
-        
-        if minimumValue < 0:
-            raise Exception('ERROR: Domain must contain only positive X and Y numbers!')
+    def __init__(self, domain, numLevels, numBits):       
+        if min(domain) < 0:
+            raise Exception('ERROR: Domain must contain only positive X, Y and t numbers!')
         self.numBits = numBits
-#        fits = True
-#        while fits: # calculates the number of bits of the grid used
-#            if (1 << self.numBits) >= maximumValue: 
-#                self.numBits -= 1
-#            else:
-#                fits = False
-#                self.numBits += 1
-#        if self.numBits > MAX_NUMBITS:
-#            raise Exception('ERROR: maximum number of bits of X and Y is ' + str(MAX_NUMBITS))
-#        
+        
         if numLevels != 'auto' and numLevels > 0:
             if numLevels > self.numBits:
-                raise Exception('ERROR: quadTree numLevels must be lower or equal to the number of bits of X and Y')
+                raise Exception('ERROR: quadTree numLevels must be lower or equal to the number of bits of X, Y and t')
             else:
                 self.numLevels = numLevels
         else:
@@ -117,7 +105,7 @@ class dynamicOctree:
         return (codes,c)
     
     def octCodeToMortonRange(self, octCode, level):
-        diff = (self.numBits - level) * 3 #because it is a cube has 3 dimensions
+        diff = (self.numBits - level) * 3
         minr = octCode << diff
         maxr = ((octCode + 1) << diff) - 1
         return (minr, maxr)
@@ -130,7 +118,6 @@ class dynamicOctree:
                 numLevels = math.floor(math.log(self.domainRegion.volume() / region.volume(), 4)) - coarser
             else:
                 numLevels = math.floor(math.log(self.domainRegion.area() / region.area(), 2)) - coarser 
-        print self.numBits, numLevels
         if dynamicCube(dynamicPoint(*self.startOct[:3]), dynamicPoint(*self.startOct[3:])).relationship(region):
             return self._overlapCodes(numLevels, self.startLevel, self.startOctCode, region, *self.startOct)[0]
         return []
@@ -206,7 +193,6 @@ class dynamicOctree:
         return (minx, miny, minz, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser = 3, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        #distinctIn = False to differentiate Quadtree nodes that are fully in the query region
         codes = self.overlapCodes(region, coarser, continuous)
 
         if distinctIn:

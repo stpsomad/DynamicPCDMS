@@ -17,21 +17,10 @@ MAX_NUMBITS = 28
 class QuadTree:
     """ QuadTree class """
     def __init__(self, domain, numLevels, numBits):
-        maximumValue = max(domain) #??
-        minimumValue = min(domain)
-        if minimumValue < 0:
+        if min(domain) < 0:
             raise Exception('ERROR: Domain must contain only positive X and Y numbers!')
         self.numBits = numBits
-#        fits = True
-#        while fits: # calculates the number of bits of the grid used
-#            if (1 << self.numBits) >= maximumValue: 
-#                self.numBits -= 1
-#            else:
-#                fits = False
-#                self.numBits += 1
-#        if self.numBits > MAX_NUMBITS:
-#            raise Exception('ERROR: maximum number of bits of X and Y is ' + str(MAX_NUMBITS))
-        
+       
         if numLevels != 'auto' and numLevels > 0:
             if numLevels > self.numBits:
                 raise Exception('ERROR: quadTree numLevels must be lower or equal to the number of bits of X and Y')
@@ -42,7 +31,7 @@ class QuadTree:
         
         mindomain = 0
         maxdomain = 1 << self.numBits
-        parentQuad = (mindomain, mindomain, maxdomain, maxdomain) # the grid of the parent (0,0, 2**numbits, 2**numbits)
+        parentQuad = (mindomain, mindomain, maxdomain, maxdomain)
         startLevel = 0
         self.domainRegion = box(*domain)
         fits = True
@@ -103,7 +92,6 @@ class QuadTree:
           
         codes = []
         c = 0
-#        f = open('quad.wkt', 'a')
         for quadIndex in range(4):
             quad = quads[quadIndex]
             relation = self._relation(region, box(*quad))
@@ -111,18 +99,15 @@ class QuadTree:
                 quadCode = (parentCode << 2) + quadIndex                
                 if parentLevel == maxDepth: #changed from original code
                     codes.append((quadCode, level, relation, self.quadCodeToMortonRange(quadCode, level)))
-#                    f.write(str(box(*quad).wkt) + '\n')
                     c += 1
                 else:
                     (tcodes, tc) = self._overlapCodes(maxDepth, level, quadCode, region, *quad)
                     if tc == 4:
                         codes.append((quadCode, level, False, self.quadCodeToMortonRange(quadCode, level)))
-#                        f.write(str(box(*quad).wkt) + '\n')
                         c += 1
                     else:
                         codes.extend(tcodes)
                         
-#        f.close()
         return (codes,c)
     
     def quadCodeToMortonRange(self, quadCode, level):
@@ -136,8 +121,6 @@ class QuadTree:
             numLevels = self.numLevels
         if (numLevels == 'auto') or (numLevels < 0):
             numLevels = math.ceil(math.log(self.domainRegion.area / region.area, 2)) + coarser
-#        print self.numBits, numLevels
-
         if box(*self.startQuad).intersects(region):
             return self._overlapCodes(numLevels, self.startLevel, self.startQuadCode, region, *self.startQuad)[0]
         return []
@@ -211,7 +194,6 @@ class QuadTree:
         return (minx,miny,maxx+1,maxy+1)
     
     def getMortonRanges(self, wkt, coarser, continuous = False, distinctIn = False, numLevels = None, maxRanges = None):
-        #distinctIn = False to differentiate Quadtree nodes that are fully in the query region
         codes = self.overlapCodes(loads(wkt), coarser, numLevels)
         if distinctIn:
             maxmranges = self.getAllRanges(codes)

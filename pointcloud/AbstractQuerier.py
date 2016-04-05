@@ -556,7 +556,7 @@ def getTime(granularity, start, end):
                  
                  
 if __name__ == "__main__":
-    configuration = 'D:/Dropbox/Thesis/Thesis/Code/ini/coastline/lxyt_1_part1.ini'
+    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/lxyzt_1_part1.ini'
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []
     querier = Querier(configuration)

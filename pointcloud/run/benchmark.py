@@ -15,7 +15,7 @@ dataset = 'coastline'
 benchmark = ['mini', 'medium', 'full']  
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
 
-integrations = ['lxyt']
+integrations = ['lxyzt']
 scalings = ['1']
 
 

@@ -14,22 +14,10 @@ MAX_NUMBITS = 28
 
 class HexadecTree:
     def __init__(self, domain, numLevels, numBits):
-        maximumValue = max(domain)
-        minimumValue = min(domain)
-        
-        if minimumValue < 0:
+        if min(domain) < 0:
             raise Exception('ERROR: Domain must contain only positive X and Y numbers!')
         self.numBits = numBits
-#        fits = True
-#        while fits: # calculates the number of bits of the grid used
-#            if (1 << self.numBits) >= maximumValue: 
-#                self.numBits -= 1
-#            else:
-#                fits = False
-#                self.numBits += 1
-#        if self.numBits > MAX_NUMBITS:
-#            raise Exception('ERROR: maximum number of bits of X and Y is ' + str(MAX_NUMBITS))
-        
+       
         if numLevels != 'auto' and numLevels > 0:
             if numLevels > self.numBits:
                 raise Exception('ERROR: quadTree numLevels must be lower or equal to the number of bits of X and Y')
@@ -126,7 +114,7 @@ class HexadecTree:
         return (codes,c)
     
     def quadCodeToMortonRange(self, hexadecCode, level):
-        diff = (self.numBits - level) * 4 #because it is a cube has 3 dimensions
+        diff = (self.numBits - level) * 4
         minr = hexadecCode << diff
         maxr = ((hexadecCode + 1) << diff) - 1
         return (minr, maxr)
@@ -139,7 +127,6 @@ class HexadecTree:
                 numLevels = math.ceil(math.log(self.domainRegion.volume() / region.volume(), 8)) - coarser
             else:
                 numLevels = math.floor(math.log(self.domainRegion.volume3D() / region.volume(), 3)) - coarser
-#        print self.numBits, numLevels
         if Tesseract(Point4D(*self.startHexadec[:4]), Point4D(*self.startHexadec[4:])).relationship(region):
             return self._overlapCodes(numLevels, self.startLevel, self.startHexadecCode, region, *self.startHexadec)[0]
         return []
@@ -217,7 +204,6 @@ class HexadecTree:
         return (mint, minx, miny, minz, maxt + 1, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser = 5, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        #distinctIn = False to differentiate Quadtree nodes that are fully in the query region
         codes = self.overlapCodes(region, coarser, continuous)
         if distinctIn:
             mmranges = self.getAllRanges(codes)
@@ -229,10 +215,4 @@ class HexadecTree:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
                 return ([], maxmranges, len(codes))
             else:
-                return ([], mmranges, len(codes))      
-
-if __name__ == "__main__":
-    import time
-    start = time.time()
-    domain = (0, 0, 0, 0, 134217728,  134217728,  134217728,  134217728)
-    hexadectree = HexadecTree(domain, 'auto')
+                return ([], mmranges, len(codes))

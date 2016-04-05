@@ -13,22 +13,10 @@ MAX_NUMBITS = 28
 
 class Octree:
     def __init__(self, domain, numLevels, numBits):
-        maximumValue = max(domain)
-        minimumValue = min(domain)
-        
-        if minimumValue < 0:
-            raise Exception('ERROR: Domain must contain only positive X and Y numbers!')
+        if min(domain) < 0:
+            raise Exception('ERROR: Domain must contain only positive X, Y and Z numbers!')
         self.numBits = numBits
-#        fits = True
-#        while fits: # calculates the number of bits of the grid used
-#            if (1 << self.numBits) >= maximumValue: 
-#                self.numBits -= 1
-#            else:
-#                fits = False
-#                self.numBits += 1
-#        if self.numBits > MAX_NUMBITS:
-#            raise Exception('ERROR: maximum number of bits of X and Y is ' + str(MAX_NUMBITS))
-        
+
         if numLevels != 'auto' and numLevels > 0:
             if numLevels > self.numBits:
                 raise Exception('ERROR: quadTree numLevels must be lower or equal to the number of bits of X and Y')
@@ -127,7 +115,6 @@ class Octree:
             numLevels = self.numLevels
         if (numLevels == 'auto') or (numLevels < 0):
             numLevels = math.ceil(math.log(self.domainRegion.volume() / region.volume(), 4)) - coarser
-#        print self.numBits, numLevels
         if Cube(Point3D(*self.startOct[:3]), Point3D(*self.startOct[3:])).relationship(region):
             return self._overlapCodes(numLevels, self.startLevel, self.startOctCode, region, *self.startOct)[0]
         return []
@@ -203,7 +190,6 @@ class Octree:
         return (minx, miny, minz, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        #distinctIn = False to differentiate Quadtree nodes that are fully in the query region
         codes = self.overlapCodes(region, coarser, numLevels)
         if distinctIn:
             mmranges = self.getAllRanges(codes)
@@ -215,17 +201,4 @@ class Octree:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
                 return ([], maxmranges, len(codes))
             else:
-                return ([], mmranges, len(codes))      
-        
-if __name__ == "__main__":
-    domain = (0, 0, 0, 4, 4, 4)
-    octree = Octree(domain, 'auto')
-    print octree.numBits
-#    c1 = Cube(Point3D(9,0,0), Point3D(11,2,2))
-    p1 = Polygon3D((15, 23, 31, 9, 51, 32, 35, 46), 0, 21)
-#    print octree.overlapCodes(c1)
-#    
-    a = octree.getMortonRanges(p1)[1]
-    print a
-    for i in a:
-        print octree.getCoords(i)
+                return ([], mmranges, len(codes))
