@@ -6,6 +6,8 @@ Created on Sat Feb 13 19:13:05 2016
 
 Adapted from: https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud/oracle/CommonOracle.py
 Author: Oscar Martinez Rubi
+Apache License
+Version 2.0, January 2004
 """
 
 from ConfigParser import ConfigParser

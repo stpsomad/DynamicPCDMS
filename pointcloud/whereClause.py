@@ -7,6 +7,9 @@ Created on Mon Mar 21 13:06:09 2016
 Structuring the WHERE statement
 Code adapted from:
 https://github.com/NLeSC/pointcloud-benchmark/blob/e0cb675c0dbb5376263d4b5b9ad0ccf938300f2f/python/pointcloud/dbops.py
+
+Apache License
+Version 2.0, January 2004
 """
 import pointcloud.reader as reader
 

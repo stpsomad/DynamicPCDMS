@@ -6,6 +6,8 @@ Created on Mon Feb 8 10:13:05 2016
 
 Adapted from: https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud/oracle/AbstractLoader.py
 Author: Oscar Martinez Rubi
+Apache License
+Version 2.0, January 2004
 """
 
 import pointcloud.general as general

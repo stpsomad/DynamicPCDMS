@@ -60,7 +60,10 @@ def getFiles(inputElement, extensions = PC_FILE_FORMATS, recursive = False):
     If inputElement is directly a file it returns a list with only one element, 
     the given file.
     To search the subfolders use recursive = True
-    Source: https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud/utils.py"""
+    Source: https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud/utils.py
+    
+    Apache License
+    Version 2.0, January 2004"""
 
     if type(extensions) == str:
         extensions = [extensions,]

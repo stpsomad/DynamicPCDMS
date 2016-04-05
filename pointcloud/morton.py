@@ -1,6 +1,8 @@
 ################################################################################
 #    Created by Oscar Martinez                                                 #
 #    o.rubi@esciencecenter.nl                                                  #
+#   Apache License                                                             #
+#   Version 2.0, January 2004                                                  #
 #                                                                              #
 #    Extended by: Stella Psomadaki using  code found in                        #
 #    Stackoverflow: http://bit.ly/1YrXQdj                                      #

@@ -19,6 +19,8 @@ except ImportError:
     dropTable, createUser, createDirectory are taken from:
     https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud
     by author: Oscar Martinez Rubi
+    Apache License
+    Version 2.0, January 2004
 """
 
 def connectSYSDBA():
