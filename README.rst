@@ -16,7 +16,6 @@ thesis
 The code used for the thesis 'Using a space filling curve approach for the management of dynamic point clouds in a relational DBMS setting'
 
 * Free software: ISC license
-* Documentation: https://pointcloud.readthedocs.org.
 
 Features
 --------
