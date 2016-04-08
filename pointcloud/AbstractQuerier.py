@@ -8,6 +8,7 @@ from ConfigParser import ConfigParser
 from shapely.wkt import loads
 from shapely.geometry import Polygon, box
 import time
+import pointcloud.general as general
 import pointcloud.structures.QuadTree as QuadTree
 import pointcloud.structures.Octree as Octree
 import pointcloud.structures.HexadecTree as HexadecTree
@@ -18,6 +19,7 @@ import pointcloud.reader as reader
 import pointcloud.whereClause as whereClause
 from pointcloud.structures.geometry import Polygon3D, dynamicPolygon, Polygon4D
 from tabulate import tabulate
+import os
 
 class Querier(Oracle):
     def __init__(self, configuration):
@@ -308,8 +310,10 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                     connection = self.getConnection()
                     cursor = connection.cursor()
                     ora.createIOT(cursor, rangeTab, self.joinColumns, 'low', True)
-                    ora.insertInto(cursor, rangeTab, data)
-                    connection.commit()
+                    sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data) )
+                    os.system(sqlldrCommand)
+#                    ora.insertInto(cursor, rangeTab, data)
+#                    connection.commit()
                     ranges = len(data)
             insert = time.time() - start2
             return ranges, morPrep, insert
@@ -542,6 +546,31 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
         else:
             print 'No data returned'
             return []
+            
+    def sqlldr(self, tableName, cols, data):
+        commonFile = 'ranges'
+        controlFile = commonFile + '.ctl'
+        badFile = commonFile + '.bad'
+        logFile = commonFile + '.log'
+        
+        ctfile = open(controlFile,'w')
+        sqlldrCols = []
+        for i in range(len(cols)):
+            column = cols[i]
+            
+            sqlldrCols.append(column + ' ' + general.DM_SQLLDR[column][0] + ' external(' + str(general.DM_SQLLDR[column][1]) + ')')
+        
+        ctfile.write("""load data
+INFILE *
+into table """ + tableName + """
+fields terminated by ','
+(""" + (',\n'.join(sqlldrCols)) + """)""")
+        ctfile.write('\nBEGINDATA\n')
+        ctfile.write(data)
+        ctfile.close()
+        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
+        print sqlLoaderCommand        
+        return sqlLoaderCommand
 
 def getTime(granularity, start, end):
     if start == None and end == None:
@@ -554,9 +583,12 @@ def getTime(granularity, start, end):
         return [["TO_DATE('{0}', 'YYYY/MM/DD')".format(reader.formatTime(start)),
                  "TO_DATE('{0}', 'YYYY/MM/DD')".format(reader.formatTime(end))]]
                  
+def format_lst(lst):
+    return '\n'.join([','.join(map(str,i)) for i in lst])
+                 
                  
 if __name__ == "__main__":
-    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/lxyzt_1_part1.ini'
+    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/zandmotor/dxyt_10000_part1.ini'
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []
     querier = Querier(configuration)

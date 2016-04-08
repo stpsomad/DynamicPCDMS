@@ -26,7 +26,9 @@ DM_SQLLDR = {
     'Y': ('integer', 20),
     'Z': ('integer', 8),
     't': ('integer', 10),
-    'm': ('integer', 40) #40 to be suitable for the deep in 4D integration also
+    'm': ('integer', 40), #40 to be suitable for the deep in 4D integration also
+    'LOW': ('integer', 40),
+    'UPPER': ('integer', 40),
     }
 
 DM_FLAT = { # The name of the column in the DB is computed with getDBColumn
@@ -37,7 +39,9 @@ DM_FLAT = { # The name of the column in the DB is computed with getDBColumn
     'Y': 'NUMBER',
     'Z': 'NUMBER',
     't': 'NUMBER',
-    'm': 'NUMBER' # Extra dimension for the Morton code
+    'm': 'NUMBER', # Extra dimension for the Morton code
+    'LOW': 'NUMBER',
+    'UPPER': 'NUMBER'
 }
 
 EQ_DIM = {

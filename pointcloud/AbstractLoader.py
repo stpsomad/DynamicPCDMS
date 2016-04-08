@@ -37,16 +37,6 @@ class Loader(Oracle):
         cursorSuper = connectionSuper.cursor()
         ora.createDirectory(cursorSuper, lasDirVariableName, parentFolder, self.userName)
         connectionSuper.close()
-
-    def getDBColumn(self, index, includeType = False):
-        column = self.cols[index]
-        if column not in general.DM_FLAT:
-            raise Exception('Wrong column!' + column)
-        columnName = 'VAL_D' + str(index+1)
-        if includeType:
-            return (columnName, general.DM_FLAT[column])
-        else:
-            return (columnName,)
     
     def getHeapColumns(self):
         heapCols = []
@@ -66,8 +56,8 @@ class Loader(Oracle):
         else: 
             return ""
     
-    def sqlldr(self, fileAbsPath, tableName):
-        commonFile = os.path.basename(fileAbsPath).replace(fileAbsPath.split('.')[-1],'')
+    def sqlldr(self, tableName):
+        commonFile = 'loader'
         controlFile = commonFile + '.ctl'
         badFile = commonFile + '.bad'
         logFile = commonFile + '.log'

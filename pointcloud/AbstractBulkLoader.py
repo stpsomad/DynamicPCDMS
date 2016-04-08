@@ -50,7 +50,7 @@ if __name__ == "__main__":
     headers = ['benchmark', 'initialisation', 'preparation', 'loading',
                'closing', 'size [MB]', 'points']
     
-    for i in range(3,4):
+    for i in range(1,2):
         configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/zandmotor/lxyt_1_part{0}.ini'.format(i)
         bulk = BulkLoader(configuration)
         temp = []

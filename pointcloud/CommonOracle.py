@@ -92,6 +92,16 @@ class Oracle:
             cols.append(general.EQ_DIM[i[0]])
         return cols
     
+    def getDBColumn(self, index, includeType = False):
+        column = self.cols[index]
+        if column not in general.DM_FLAT:
+            raise Exception('Wrong column!' + column)
+        columnName = 'VAL_D' + str(index+1)
+        if includeType:
+            return (columnName, general.DM_FLAT[column])
+        else:
+            return (columnName,)
+    
     def getConnectString(self, superUser = False):
         if not superUser:
             """ Gets a connection string to be used in SQLPlus or CxOracle"""

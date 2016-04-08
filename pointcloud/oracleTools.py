@@ -11,7 +11,6 @@ except ImportError:
 	print "cx_Oracle module cannot be found"
 	raise
  
-
 """ This script contains Oracle related functions. The functions mostly contain
     SQL commands to be posed to the database. 
     
@@ -245,3 +244,4 @@ RENAME CONSTRAINT {1} TO {2}""".format(table, constraint_old, constraint_new))
 
 def renameIndex(cursor, index_old, index_new):
     cursor.execute("""ALTER INDEX {0} RENAME TO {1}""".format(index_old, index_new))
+    
