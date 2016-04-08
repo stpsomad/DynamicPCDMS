@@ -1,0 +1,2 @@
+benchmark      initialisation    preparation    loading    closing    size [MB]    points
+full                        0          161.4     131.33     268.44         1970  73913926

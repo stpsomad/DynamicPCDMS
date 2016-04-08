@@ -31,32 +31,32 @@ def createUser(cursorSuper, userName, password, tableSpace, tempTableSpace):
     """ Creates a user in Oracle.
     If the user name already exists, the script DROPS it first"""
     
-    # Check if the user already exists and drops it
-    cursorSuper.execute("select * from all_users where username = '{0}'".format(userName.upper()))
+    cursorSuper.execute("SELECT * FROM all_users WHERE username = '{0}'".format(userName.upper()))
     if len(cursorSuper.fetchall()) != 0:
-        cursorSuper.execute('drop user ' + userName + ' CASCADE')
+        cursorSuper.execute('DROP USER ' + userName + ' CASCADE')
         cursorSuper.connection.commit()
     
     tsString = ''
     if tableSpace != None and tableSpace != '':
-        tsString += ' default tablespace ' + tableSpace + ' '
+        tsString += ' DEFAULT TABLESPACE ' + tableSpace + ' '
     if tempTableSpace != None and tempTableSpace != '':
-        tsString += ' temporary tablespace ' + tempTableSpace + ' '
+        tsString += ' TEMPORARY TABLESPACE ' + tempTableSpace + ' '
     
-    cursorSuper.execute('create user ' + userName + ' identified by ' + password + tsString)
-    cursorSuper.execute('grant unlimited tablespace, connect, resource, create view to ' + userName)
+    cursorSuper.execute('CREATE USER ' + userName + ' IDENTIFIED BY ' + password + tsString)
+    cursorSuper.execute('GRANT UNLIMITED TABLESPACE, CONNECT, RESOURCE, CREATE VIEW TO ' + userName)
     cursorSuper.connection.commit()
 
 def createDirectory(cursorSuper, directoryVariableName, directoryAbsPath, userName):
     """ Creates a Oracle directory with read and write permission for the user"""
-    cursorSuper.execute('select directory_name from all_directories where directory_name = :name', [directoryVariableName,])
+    cursorSuper.execute("""SELECT directory_name
+FROM all_directories
+WHERE directory_name = :name""", [directoryVariableName,])
     if len(cursorSuper.fetchall()):
-        cursorSuper.execute("drop directory " + directoryVariableName)
+        cursorSuper.execute("DROP DIRECTORY " + directoryVariableName)
         cursorSuper.connection.commit()
-    cursorSuper.execute("create directory " + directoryVariableName + " as '" + directoryAbsPath + "'")
-    cursorSuper.execute("grant read on directory " + directoryVariableName + " to " + userName)
-    # without write permission not possible to create the external table in my machine
-    cursorSuper.execute("grant write on directory " + directoryVariableName + " to " + userName)
+    cursorSuper.execute("CREATE DIRECTORY " + directoryVariableName + " AS '" + directoryAbsPath + "'")
+    cursorSuper.execute("GRANT READ ON DIRECTORY " + directoryVariableName + " TO " + userName)
+    cursorSuper.execute("GRANT WRITE ON DIRECTORY " + directoryVariableName + " TO " + userName)
     cursorSuper.connection.commit()
 
 def createMetaTable(cursor, metaTable, check):
@@ -68,9 +68,23 @@ def createMetaTable(cursor, metaTable, check):
     
     dropTable(cursor, metaTable,check)
     
-    cursor.execute("""CREATE TABLE {0} (id INTEGER, srid INTEGER, minx DOUBLE PRECISION, miny DOUBLE PRECISION, minz DOUBLE PRECISION, mint INTEGER,
-    maxx DOUBLE PRECISION, maxy DOUBLE PRECISION, maxz DOUBLE PRECISION, maxt INTEGER, scalex DOUBLE PRECISION,
-    scaley DOUBLE PRECISION, scalez DOUBLE PRECISION, offx DOUBLE PRECISION, offy DOUBLE PRECISION, offz DOUBLE PRECISION)""".format(metaTable))
+    cursor.execute("""CREATE TABLE {0} (
+id INTEGER,
+srid INTEGER,
+minx DOUBLE PRECISION,
+miny DOUBLE PRECISION,
+minz DOUBLE PRECISION,
+mint INTEGER,
+maxx DOUBLE PRECISION,
+maxy DOUBLE PRECISION,
+maxz DOUBLE PRECISION,
+maxt INTEGER,
+scalex DOUBLE PRECISION,
+scaley DOUBLE PRECISION,
+scalez DOUBLE PRECISION,
+offx DOUBLE PRECISION,
+offy DOUBLE PRECISION,
+offz DOUBLE PRECISION)""".format(metaTable))
     
 def populateMetaTable(connection, cursor, metaTable, srid, minx, mixy, minz, mint, maxx, maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz):
     """ Populate the metadata table with the right metadata. Used only for the first
@@ -83,7 +97,8 @@ def populateMetaTable(connection, cursor, metaTable, srid, minx, mixy, minz, min
 def updateMetaTableValues(connection, cursor, metaTable, minx, miny, minz, mint, maxx, maxy, maxz, maxt):
     """Update the metadata if the values have changed since the last import."""    
     
-    cursor.execute("""UPDATE {0} SET maxx = {1}, maxy = {2}, minx = {3}, miny = {4}, mint = {5}, maxt = {6}, minz = {7}, maxz = {8}
+    cursor.execute("""UPDATE {0} 
+SET maxx = {1}, maxy = {2}, minx = {3}, miny = {4}, mint = {5}, maxt = {6}, minz = {7}, maxz = {8}
 WHERE id = 1""".format(metaTable, maxx, maxy, minx, miny, mint, maxt, minz, maxz))
     connection.commit()
 
@@ -91,7 +106,8 @@ def explainPlan(cursor, query, iid):
     cursor.execute("EXPLAIN PLAN SET STATEMENT_ID = '{0}' FOR ".format(iid) + query)
     
 def displayPlan(cursor, iid):
-    cursor.execute("SELECT PLAN_TABLE_OUTPUT FROM TABLE(DBMS_XPLAN.DISPLAY('PLAN_TABLE', '{0}','ALL'))".format(iid))
+    cursor.execute("""SELECT PLAN_TABLE_OUTPUT 
+FROM TABLE(DBMS_XPLAN.DISPLAY('PLAN_TABLE', '{0}','ALL'))""".format(iid))
     return cursor.fetchall()
 
 def getNumPoints(connection, cursor, tableName):
@@ -110,9 +126,9 @@ def mogrifyMany(cursor, query, queryArgs = None):
     if queryArgs == None:
         cursor.execute(query)
     else:
-        cursor.prepare(query) #Prepare the query so that it is not parsed all the time and can be reused.
+        cursor.prepare(query) 
         cursor.bindarraysize = 20000
-        bindnames = cursor.bindnames() #the query must be prepared first
+        bindnames = cursor.bindnames() 
         if len(queryArgs[0]) != len(bindnames):
             raise Exception('Error: len(queryArgs) != len(bindnames) \n ' + str(queryArgs) + '\n' + str(bindnames))
         elif (type(queryArgs) == dict) or (type(queryArgs) == tuple):
@@ -127,7 +143,7 @@ def mogrify(cursor, query, queryArgs = None):
         return query
     else:
         cursor.prepare(query)
-        bindnames = cursor.bindnames() #the query must be prepared first
+        bindnames = cursor.bindnames()
         if len(queryArgs) != len(bindnames):
             raise Exception('Error: len(queryArgs) != len(bindnames) \n ' + str(queryArgs) + '\n' + str(bindnames))
         if (type(queryArgs) == list) or (type(queryArgs) == tuple):
@@ -166,9 +182,7 @@ def createIOT(cursor, iotTableName, columns, keyColumn, check = False):
     """ Creates an Index-Organized-Table
         iotTableName is the name of the table you need to add,
         columns is a list of strings with the column name and datatype
-        keyColumn is the PRIMARY KEY of the iot
-
-        returns none"""
+        keyColumn is the PRIMARY KEY of the iot"""
     dropTable(cursor,iotTableName,check)
 
     mogrifyMany(cursor,"""CREATE TABLE """+ iotTableName +"""("""+','.join(columns)+""",
@@ -177,12 +191,16 @@ def createIOT(cursor, iotTableName, columns, keyColumn, check = False):
 
 def findOwner(cursor, tableName):
     """Finds the owner of a table"""
-    cursor.execute("""SELECT OWNER FROM ALL_OBJECTS WHERE object_name = '"""+tableName.upper()+"'")
+    cursor.execute("""SELECT OWNER
+FROM ALL_OBJECTS
+WHERE object_name = '"""+tableName.upper()+"'")
     return cursor.fetchone()[0]
 
 def countColumns(cursor, tableName):
     """Counts the columns of a table"""
-    cursor.execute("""SELECT COUNT(*) FROM all_tab_columns WHERE owner='"""+findOwner(cursor,tableName)+"' AND table_name ='"+tableName.upper()+"'")
+    cursor.execute("""SELECT COUNT(*) 
+FROM all_tab_columns
+WHERE owner='"""+findOwner(cursor,tableName)+"' AND table_name ='"+tableName.upper()+"'")
     return cursor.fetchone()[0]
 
 def insertInto(cursor, tableName, data, explain = False, iid = ''):
@@ -199,16 +217,15 @@ def insertInto(cursor, tableName, data, explain = False, iid = ''):
 def rebuildIOT(cursor, iotTableName):
     """Rebuild the index and reduce fragmentation because of incremental updates"""
     mogrifyExecute(cursor,"ALTER TABLE "+iotTableName+ " MOVE")
-    #Note: you can also specify ONLINE which means people are modifying this data while we are rebuilding
     
 def createTableQuery(cursor, name, columns, check = False):
     dropTable(cursor, name, check)
     cursor.execute("""CREATE TABLE {0} ({1})""".format(name, ','.join(columns)))
     
 def appendData(connection, cursor, iotTableName, tableName):
-    cursor.execute("""insert /*+ append */ into {0}
-select *
-from {1}""".format(iotTableName, tableName))
+    cursor.execute("""INSERT /*+ APPEND */ INTO {0}
+SELECT *
+FROM {1}""".format(iotTableName, tableName))
     connection.commit()
     
 def getSizeTable(cursor, tableName, super = True):
@@ -218,3 +235,13 @@ def getSizeTable(cursor, tableName, super = True):
     if size == None:
         size = 0
     return size
+    
+def renameTable(cursor, old_name, new_name):
+    cursor.execute("""RENAME {0} to {1}""".format(old_name, new_name))
+    
+def renameConstraint(cursor, table, constraint_old, constraint_new):
+    cursor.execute("""ALTER TABLE {0}
+RENAME CONSTRAINT {1} TO {2}""".format(table, constraint_old, constraint_new))
+
+def renameIndex(cursor, index_old, index_new):
+    cursor.execute("""ALTER INDEX {0} RENAME TO {1}""".format(index_old, index_new))

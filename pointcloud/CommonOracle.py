@@ -30,7 +30,6 @@ class Oracle:
         self.parse = config.get('benchmark-options', 'parse')
         self.loader = config.get('benchmark-options', 'loader')
         self.integration = config.get('benchmark-options', 'integration')
-#        self.resolution = config.get('benchmark-options', 'resolution') 
         self.ORCLdirectory = config.get('data-dir', 'ORCLdirectory')
         self.directory = general.DIRS[self.ORCLdirectory]
         self.init = config.getboolean('benchmark-options', 'init')

@@ -7,7 +7,7 @@ Created on Thu Feb 11 10:25:30 2016
 from pointcloud.AbstractLoader import Loader
 import time
 import pointcloud.oracleTools as Ora
-from tabulate import tabulate # external
+from tabulate import tabulate
 
 class BulkLoader(Loader):
     def __init__(self, configuration):
@@ -25,8 +25,7 @@ class BulkLoader(Loader):
         if self.loader == 'external':
             self.extLoaderPrep(connection, self.configFile)
         elif self.loader == 'sqlldr':
-            self.sqlldrPrep(connection, self.configFile)
-            #dropping IOT and resorting available only for sqlldr
+            self.sqlldrPrep(connection, self.configFile) #dropping IOT and resorting available only for sqlldr
         connection.close()
         
     def loading(self):
@@ -51,8 +50,8 @@ if __name__ == "__main__":
     headers = ['benchmark', 'initialisation', 'preparation', 'loading',
                'closing', 'size [MB]', 'points']
     
-    for i in range(1,4):
-        configuration = 'D:/Dropbox/Thesis/Thesis/Code/ini/dxyt_10000_part{0}.ini'.format(i)
+    for i in range(3,4):
+        configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/zandmotor/lxyt_1_part{0}.ini'.format(i)
         bulk = BulkLoader(configuration)
         temp = []
         temp.append(benchmark[i - 1])

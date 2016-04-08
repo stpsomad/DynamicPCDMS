@@ -23,7 +23,7 @@ class Loader(Oracle):
     def getParallelString(self, numProcesses):
         parallelString = ''
         if numProcesses > 1:
-            parallelString = ' parallel ' + str(numProcesses) + ' '
+            parallelString = ' PARALLEL ' + str(numProcesses) + ' '
         return parallelString 
 
     def createUser(self):
@@ -100,31 +100,18 @@ CREATE TABLE """ + tableName + """ (""" + (',\n'.join(self.getHeapColumns())) + 
 
     def createExternalTable(self, cursor, txtFiles, tableName, txtDirVariableName, numProcesses):
         ora.dropTable(cursor, tableName, True)
-        print  """
-CREATE TABLE """ + tableName + """ (""" + (',\n'.join(self.getHeapColumns())) + """)
-organization external
-(
-type oracle_loader
-default directory """ + txtDirVariableName + """
-access parameters (
-    records delimited by newline
-    fields terminated by ', ')
-location ('""" + txtFiles + """')
-)
-""" + self.getParallelString(numProcesses) + """ reject limit 0"""
-
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + tableName + """ (""" + (',\n'.join(self.getHeapColumns())) + """)
-organization external
+ORGANIZATION EXTERNAL
 (
-type oracle_loader
-default directory """ + txtDirVariableName + """
-access parameters (
-    records delimited by newline
-    fields terminated by ', ')
-location ('""" + txtFiles + """')
+TYPE oracle_loader
+DEFAULT DIRECTORY """ + txtDirVariableName + """
+ACCESS PARAMETERS (
+    RECORDS DELIMITED BY NEWLINE
+    FIELDS TERMINATED BY ', ')
+LOCATION ('""" + txtFiles + """')
 )
-""" + self.getParallelString(numProcesses) + """ reject limit 0""")     
+""" + self.getParallelString(numProcesses) + """ REJECT LIMIT 0""")     
         
     def createIOTTable(self, cursor, iotTableName, tableName, tableSpace, numProcesses):
         """ Create Index-Organized-Table and populate it from tableName Table"""
@@ -135,18 +122,36 @@ location ('""" + txtFiles + """')
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + iotTableName + """
 (""" + (', '.join(cls)) + """, 
-    constraint """ + iotTableName + """_PK primary key (""" + self.index + """))
-    organization index""" + self.getTableSpaceString(tableSpace) + """
-    pctfree 0 nologging
+    CONSTRAINT """ + iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
+    ORGANIZATION INDEX""" + self.getTableSpaceString(tableSpace) + """
+    PCTFREE 0 NOLOGGING
 """ + self.getParallelString(numProcesses) + """
-as
+AS
     SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName)
     
+    def addIOTUnionAll(self, cursor):
+        temp_iot = self.iotTableName + '_2'
+        ora.renameTable(cursor, self.iotTableName, temp_iot)
+        ora.renameConstraint(cursor, temp_iot, self.iotTableName + '_PK', temp_iot + '_PK')
+        ora.renameIndex(cursor, self.iotTableName + '_PK', temp_iot + '_PK')
+        
+        cls = [', '.join(i[0] for i in self.columns)]
+        
+        ora.mogrifyExecute(cursor, """
+CREATE TABLE """ + self.iotTableName + """
+(""" + (', '.join(cls)) + """, 
+    CONSTRAINT """ + self.iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
+    ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpace) + """
+    PCTFREE 0 NOLOGGING
+""" + self.getParallelString(self.numProcesses) + """AS
+SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
+UNION ALL
+SELECT """  + (', '.join(cls)) + ' FROM ' + temp_iot)
+
+        ora.dropTable(cursor, temp_iot)
+
     def computeStatistics(self, cursor):
-        #COMPUTE STATISTICS instructs Oracle Database to compute exact statistics about the analyzed object and store them in the data dictionary.
-        #Both computed and estimated statistics are used by the Oracle Database optimizer to choose the execution plan for SQL statements that access analyzed objects.
         ora.mogrifyExecute(cursor, "ANALYZE TABLE " + self.iotTableName + "  compute system statistics for table")
-        # http://docs.oracle.com/cd/B28359_01/appdev.111/b28419/d_stats.htm#i1036461
         ora.mogrifyExecute(cursor,"""
 BEGIN
     dbms_stats.gather_table_stats('""" + self.user + """','""" + self.iotTableName + """',NULL,NULL,FALSE,'FOR ALL COLUMNS SIZE AUTO',8,'ALL');
@@ -190,10 +195,12 @@ END;""")
         else:
             if self.update == 'dump':
                 ora.appendData(connection, cursor, self.iotTableName, self.tableName)
-            else:
+            elif self.update == 'union':
+                self.addIOTUnionAll(cursor)
+            elif self.update == 'resort':
                 self.rebuildIOT(connection)
-        cursor.execute('DROP TABLE {0}'.format(self.tableName))
-    
+        ora.dropTable(cursor, self.tableName)
+           
     def rebuildIOT(self, connection):
         cursor = connection.cursor()
         ora.appendData(connection, cursor, self.tableName, self.iotTableName)
