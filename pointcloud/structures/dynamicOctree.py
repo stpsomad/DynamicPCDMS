@@ -12,7 +12,7 @@ from pointcloud.structures.geometry import dynamicPoint, dynamicCube
 MAX_NUMBITS = 28
 
 class dynamicOctree:
-    def __init__(self, domain, numLevels, numBits):       
+    def __init__(self, domain, numLevels, numBits):  
         if min(domain) < 0:
             raise Exception('ERROR: Domain must contain only positive X, Y and t numbers!')
         self.numBits = numBits
@@ -117,7 +117,8 @@ class dynamicOctree:
             if continuous:
                 numLevels = math.floor(math.log(self.domainRegion.volume() / region.volume(), 4)) - coarser
             else:
-                numLevels = math.floor(math.log(self.domainRegion.area() / region.area(), 2)) - coarser 
+                numLevels = math.floor(math.log(self.domainRegion.area() / region.area(), 2)) - coarser
+
         if dynamicCube(dynamicPoint(*self.startOct[:3]), dynamicPoint(*self.startOct[3:])).relationship(region):
             return self._overlapCodes(numLevels, self.startLevel, self.startOctCode, region, *self.startOct)[0]
         return []

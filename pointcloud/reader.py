@@ -150,7 +150,3 @@ def formatTime(t):
             return '{0}/0{1}/{2}'.format(t[0],t[1],t[2])
     else:
         return '{0}/{1}/{2}'.format(t[0],t[1],t[2])
-
-if __name__ == "__main__":
-    print morton2coordst3D(37788318397782024296612)
-    print daySinceEpoch(2116,12,31)

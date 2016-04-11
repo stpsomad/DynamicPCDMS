@@ -7,7 +7,7 @@ Created on Fri Feb 19 16:37:13 2016
 import pointcloud.morton as morton
 import numpy
 import math
-from pointcloud.structures.geometry import Cube, Polygon3D, Point3D
+from pointcloud.structures.geometry import Cube, Point3D
 
 MAX_NUMBITS = 28
 

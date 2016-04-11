@@ -15,16 +15,16 @@ dataset = 'coastline'
 benchmark = ['mini', 'medium', 'full']  
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
 
-integrations = ['lxyzt']
-scalings = ['1']
+integrations = ['dxyt']
+scalings = ['10000']
 
 
 for integr in integrations:
     for scaling in scalings:
         loadings = []
         queries = []
-        for i in range(1,2):
-            configuration = 'D:/Dropbox/Thesis/Thesis/Code/ini/{0}/{1}_{2}_part{3}.ini'.format(dataset, integr, scaling, i)
+        for i in range(2,3):
+            configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/{0}/{1}_{2}_part{3}.ini'.format(dataset, integr, scaling, i)
             bulk = BulkLoader(configuration)
             loading = []
             loading.append(benchmark[i - 1])
@@ -49,8 +49,8 @@ for integr in integrations:
             print tabulate(loadings, hloading, tablefmt="plain")
             
     
-    print 'writing to file statistics for case: {0}_{1}_{2}'.format(bulk.integration, bulk.parse, bulk.scale)
-    f = open('test.txt', 'a')
-    f.write('Statistics for case: {0} {1} {2}\n'.format(bulk.integration, bulk.parse, bulk.scale))
-    f.write(tabulate(loadings, hloading, tablefmt="plain"))
-    f.write('\n')
+#    print 'writing to file statistics for case: {0} {1} {2}'.format(bulk.integration, bulk.parse, bulk.scale)
+#    f = open('test.txt', 'a')
+#    f.write('Statistics for case: {0} {1} {2}\n'.format(bulk.integration, bulk.parse, bulk.scale))
+#    f.write(tabulate(loadings, hloading, tablefmt="plain"))
+#    f.write('\n')

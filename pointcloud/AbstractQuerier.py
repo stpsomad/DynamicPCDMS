@@ -129,8 +129,10 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
         else:
             if self.start_date is None and self.end_date is None:
                 times = [[self.mint * self.scale, self.maxt * self.scale]]
-            else:
-                times = [[self.start_date, self.end_date]]
+            elif self.start_date is not None and self.end_date is not None:
+                times = [[self.start_date * self.scale, self.end_date * self.scale]]
+            elif self.end_date is None:
+                times = [[self.start_date * self.scale, None]]
 
         if self.ozmin is None or self.ozmax is None: #no selectivity on z
             zmin = int(round((self.minz - self.offz)/self.scalez, 0))
@@ -168,17 +170,17 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 if times[0][1] is None:
                     continuous = False
                     times[0][1] = times[0][0]
-                    coarser = 1 #1
+                    coarser = 8 #1
                 elif self.qtype.lower() == 'space':
                     #space should go one deeper so have -1 but very slow
-                    coarser = -2 #-1 maybe -2 even
+                    coarser = 1 #-1 maybe -2 even
                 else:
-                    coarser = 0 #0
+                    coarser = 2 #0
                     
                 if self.timeType == 'discrete' and (self.start_date is not None) and (self.end_date is not None):
                     geometry = [dynamicPolygon(geom, times[0][0], times[0][0]),
                                 dynamicPolygon(geom, times[0][1], times[0][1])]
-                    coarser = 3 #3
+                    coarser = 8 #3
                 else:
                     geometry = dynamicPolygon(geom, times[0][0], times[0][1])                    
                 
@@ -271,8 +273,9 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
         length = len(cursor.fetchall())
         connection.close()
         if length:
-            return rangeTab, None, 0, 0
+            return None, 0, 0
         else:
+            # TODO: use sqlldr
             start1 = time.time()
             if isinstance(geometry, list):
                 data1 = self.structure.getMortonRanges(geometry[0], coarser, 
@@ -292,11 +295,15 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                     cursor = connection.cursor()
                     ora.createIOT(cursor, rangeTab, self.joinColumns, 'low', True)
                     if len(data1):
-                        ora.insertInto(cursor, rangeTab, data1)
-                        connection.commit()       
+                        sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data1) )
+                        os.system(sqlldrCommand)
+#                        ora.insertInto(cursor, rangeTab, data1)
+#                        connection.commit()       
                     if len(data2):
-                        ora.insertInto(cursor, rangeTab, data2)
-                        connection.commit()
+                        sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data2) )
+                        os.system(sqlldrCommand)
+#                        ora.insertInto(cursor, rangeTab, data2)
+#                        connection.commit()
             else:
                 data = self.structure.getMortonRanges(geometry, coarser, 
                                                       continuous, 
@@ -562,14 +569,13 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
         
         ctfile.write("""load data
 INFILE *
-into table """ + tableName + """
+append into table """ + tableName + """
 fields terminated by ','
 (""" + (',\n'.join(sqlldrCols)) + """)""")
         ctfile.write('\nBEGINDATA\n')
         ctfile.write(data)
         ctfile.close()
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
-        print sqlLoaderCommand        
         return sqlLoaderCommand
 
 def getTime(granularity, start, end):
@@ -588,7 +594,7 @@ def format_lst(lst):
                  
                  
 if __name__ == "__main__":
-    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/zandmotor/dxyt_10000_part1.ini'
+    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/dxyt_10000_part1.ini'
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []
     querier = Querier(configuration)
@@ -607,5 +613,5 @@ if __name__ == "__main__":
 #    for num in querier.ids:
 #        ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
 #        ora.dropTable(cursor, querier.rangeTable + str(num))
-    
+    print
     print tabulate(queries, hquery, tablefmt="plain")

@@ -150,11 +150,10 @@ END;""")
 
     def extLoaderPrep(self, connection, configuration):
         cursor = connection.cursor()
-        #Create meta table if it does not exist already
+
         if self.init:
             ora.createMetaTable(cursor, self.metaTable, True)
-        
-        #Run the morton converter
+
         command = """python -m pointcloud.mortonConverter {0}""".format(configuration)
         os.system(command)
         self.createExternalTable(cursor, '*.txt', self.tableName, self.ORCLdirectory, self.numProcesses)
@@ -173,8 +172,8 @@ END;""")
         self.createFlatTable(cursor, self.tableName, self.tableSpace)
         if self.init:
             ora.createMetaTable(cursor, self.metaTable, True)
-            
-        commnandsqlldr = self.sqlldr(self.directory, self.tableName)
+
+        commnandsqlldr = self.sqlldr(self.tableName)
         command = """python -m pointcloud.mortonConverter {0} | """.format(configuration) + commnandsqlldr
         os.system(command)
         
