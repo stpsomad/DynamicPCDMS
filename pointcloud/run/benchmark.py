@@ -16,14 +16,14 @@ benchmark = ['mini', 'medium', 'full']
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
 
 integrations = ['dxyt']
-scalings = ['10000']
+scalings = ['100000']
 
 
 for integr in integrations:
     for scaling in scalings:
         loadings = []
         queries = []
-        for i in range(2,3):
+        for i in range(1,2):
             configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/{0}/{1}_{2}_part{3}.ini'.format(dataset, integr, scaling, i)
             bulk = BulkLoader(configuration)
             loading = []

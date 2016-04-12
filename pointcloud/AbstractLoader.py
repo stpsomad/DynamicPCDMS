@@ -19,12 +19,6 @@ from CommonOracle import Oracle
 class Loader(Oracle):
     def __init__(self, configuration):
         Oracle.__init__(self, configuration)
-    
-    def getParallelString(self, numProcesses):
-        parallelString = ''
-        if numProcesses > 1:
-            parallelString = ' PARALLEL ' + str(numProcesses) + ' '
-        return parallelString 
 
     def createUser(self):
         connectionSuper = self.getConnection(True)

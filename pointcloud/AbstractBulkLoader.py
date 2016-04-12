@@ -5,9 +5,7 @@ Created on Thu Feb 11 10:25:30 2016
 @author: Stella Psomadaki
 """
 from pointcloud.AbstractLoader import Loader
-import time
 import pointcloud.oracleTools as Ora
-from tabulate import tabulate
 
 class BulkLoader(Loader):
     def __init__(self, configuration):
@@ -42,42 +40,3 @@ class BulkLoader(Loader):
     
     def statistics(self):
         return self.sizeIOT()
-        
-if __name__ == "__main__":
-    
-    times = []
-    benchmark = ['mini', 'medium', 'full']  
-    headers = ['benchmark', 'initialisation', 'preparation', 'loading',
-               'closing', 'size [MB]', 'points']
-    
-    for i in range(1,2):
-        configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/zandmotor/lxyt_1_part{0}.ini'.format(i)
-        bulk = BulkLoader(configuration)
-        temp = []
-        temp.append(benchmark[i - 1])
-        
-        temp.append(0) #no initialisation
-        
-        start = time.clock()
-        bulk.preparation()
-        temp.append(round(time.clock() - start, 2))
-        
-        start = time.clock()
-        bulk.loading()
-        temp.append(round(time.clock() - start, 2))
-        
-        start = time.clock()
-        bulk.closing()
-        temp.append(round(time.clock() - start, 2))
-       
-        size, points = bulk.statistics()
-        temp.append(round(size,2))
-        temp.append(int(points))
-        
-        times.append(temp)
-
-    print tabulate(times, headers, tablefmt="plain")
-
-    f = open('loading.txt', 'w')
-    f.write(tabulate(times, headers, tablefmt="plain"))        
-    f.close()

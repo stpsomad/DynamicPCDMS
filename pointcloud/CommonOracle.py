@@ -115,3 +115,15 @@ class Oracle:
             return connect(self.getConnectString(superUser))
         except:
             print "Connection could not be established"
+            
+    def getParallelString(self, numProcesses):
+        parallelString = ''
+        if numProcesses > 1:
+            parallelString = ' PARALLEL ' + str(numProcesses) + ' '
+        return parallelString
+        
+    def getCTASStatement(self, tableName):
+        return "CREATE TABLE " + tableName + " AS "
+        
+    def getSelectStatement(self, table, hints, columns = '*'):
+        return "SELECT " + hints + ' ' + columns + " FROM " + table

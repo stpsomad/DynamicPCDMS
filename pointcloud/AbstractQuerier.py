@@ -84,8 +84,10 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
         self.mortonJoinWhere = '(t.morton BETWEEN r.low AND r.upper)'
         if self.granularity == 'day':
             self.queryColumns = ['time VARCHAR2(20)', 'X NUMBER', 'Y NUMBER', 'Z FLOAT']
+            params = [0, 4, 4, 3, 1, -2, 0, 3, 4, 0, 0, 4, 3, 0, 3, 4, 1, 4]
         else:
             self.queryColumns = ['time INTEGER', 'X NUMBER','Y NUMBER', 'Z FLOAT']
+            params = [0, 4, 4, 3, 8, 1, 2, 8]
             
         self.ozmin, self.ozmax  = 0, 0
         self.wkt = None
@@ -113,7 +115,6 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
             self.wkt = str(self.wkt)
         connection.close()
         
-
         # Setting up the missing variables along with transformations to the time encoding. 
         if self.granularity == 'day':
             if self.start_date is None and self.end_date is None:
@@ -121,8 +122,10 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
             elif self.start_date is not None and self.end_date is not None:
                 self.start_date = map(int, self.start_date.split(','))
                 self.end_date = map(int, self.end_date.split(','))
-                times = [[reader.daySinceEpoch(self.start_date[0], self.start_date[1], self.start_date[2]) * self.scale, 
-                          reader.daySinceEpoch(self.end_date[0], self.end_date[1], self.end_date[2]) * self.scale]]
+                times = [[reader.daySinceEpoch(self.start_date[0], 
+                        self.start_date[1], self.start_date[2]) * self.scale, 
+                        reader.daySinceEpoch(self.end_date[0], 
+                        self.end_date[1], self.end_date[2]) * self.scale]]
             elif self.end_date is None:
                 self.start_date = map(int, self.start_date.split(','))
                 times = [[reader.daySinceEpoch(self.start_date[0], self.start_date[1], self.start_date[2]) * self.scale, None]]
@@ -172,10 +175,9 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                     times[0][1] = times[0][0]
                     coarser = 8 #1
                 elif self.qtype.lower() == 'space':
-                    #space should go one deeper so have -1 but very slow
-                    coarser = 1 #-1 maybe -2 even
+                    coarser = 1 #-2
                 else:
-                    coarser = 2 #0
+                    coarser = 2 #0, 2
                     
                 if self.timeType == 'discrete' and (self.start_date is not None) and (self.end_date is not None):
                     geometry = [dynamicPolygon(geom, times[0][0], times[0][0]),
@@ -216,6 +218,7 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 if times[0][1] is None:
                     times[0][1] = times[0][0]
                     coarser = 3 #3
+                    continuous = False
                 else:
                     coarser = 0 #0
                 
@@ -273,9 +276,8 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
         length = len(cursor.fetchall())
         connection.close()
         if length:
-            return None, 0, 0
+            return 0, 0, 0
         else:
-            # TODO: use sqlldr
             start1 = time.time()
             if isinstance(geometry, list):
                 data1 = self.structure.getMortonRanges(geometry[0], coarser, 
@@ -296,14 +298,10 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                     ora.createIOT(cursor, rangeTab, self.joinColumns, 'low', True)
                     if len(data1):
                         sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data1) )
-                        os.system(sqlldrCommand)
-#                        ora.insertInto(cursor, rangeTab, data1)
-#                        connection.commit()       
+                        os.system(sqlldrCommand)   
                     if len(data2):
                         sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data2) )
                         os.system(sqlldrCommand)
-#                        ora.insertInto(cursor, rangeTab, data2)
-#                        connection.commit()
             else:
                 data = self.structure.getMortonRanges(geometry, coarser, 
                                                       continuous, 
@@ -319,8 +317,6 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                     ora.createIOT(cursor, rangeTab, self.joinColumns, 'low', True)
                     sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data) )
                     os.system(sqlldrCommand)
-#                    ora.insertInto(cursor, rangeTab, data)
-#                    connection.commit()
                     ranges = len(data)
             insert = time.time() - start2
             return ranges, morPrep, insert
@@ -375,13 +371,20 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
         
         if self.qtype.replace(' ', '').lower() != 'nn-search':
             if self.granularity == 'day':
-                query = """CREATE TABLE {0} AS (SELECT /*+ PARALLEL(6) */ * 
-FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(SELECT X, Y, Z, TO_DATE(TIME, 'yyyy/mm/dd') as TIME from {1}), 
-MDSYS.SDO_GEOMETRY('{2}', {3}), {4})) {5})""".format(queryTab, tempName, self.wkt, self.srid, self.tolerance, zWhere)
+                query =  self.getCTASStatement(queryTab) + \
+'(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z',
+self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
+#"""CREATE TABLE """ + queryTab + """ AS (SELECT """ + self.getParallelString(6) + """ * 
+#FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(SELECT X, Y, Z, TO_DATE(TIME, 'yyyy/mm/dd') as TIME 
+#from """ + tempName + """), 
+#MDSYS.SDO_GEOMETRY('"""+ self.wkt + """', """ + self.srid + "), " + self.tolerance + """)) 
+#""" + zWhere +")"
             else:
-                query = """CREATE TABLE {0} AS (SELECT /*+ PARALLEL(6) */ * 
-FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(SELECT X, Y, Z, TIME from {1}), 
-MDSYS.SDO_GEOMETRY('{2}', {3}), {4})) {5})""".format(queryTab, tempName, self.wkt, self.srid, self.tolerance, zWhere)
+                query = self.getCTASStatement(queryTab) + \
+'(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere) + ')'
+#                query = """CREATE TABLE {0} AS (SELECT /*+ PARALLEL(6) */ * 
+#FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(SELECT X, Y, Z, TIME from {1}), 
+#MDSYS.SDO_GEOMETRY('{2}', {3}), {4})) {5})""".format(queryTab, tempName, self.wkt, self.srid, self.tolerance, zWhere)
 
         connection = self.getConnection()
         cursor = connection.cursor()
@@ -415,9 +418,10 @@ MDSYS.SDO_GEOMETRY('{2}', {3}), {4})) {5})""".format(queryTab, tempName, self.wk
 
         if whereStatement is not '':
             if rangeTab is not None:
-                query = """select /*+ USE_NL (t r)*/  {0} 
-from {1} t, {2} r 
-{3}""".format(', '.join(['t.'+i for i in self.columnNames]), self.iotTableName, rangeTab, whereStatement)
+                query = """select {0} {1} 
+from {2} t, {3} r 
+{4}""".format(self.getHintStatement(['USE_NL (t r)']), 
+', '.join(['t.'+i for i in self.columnNames]), self.iotTableName, rangeTab, whereStatement)
             else:
                 query = """select {0} 
 from {1} t {2}""".format(', '.join(self.columnNames), self.iotTableName, whereStatement)
@@ -577,6 +581,29 @@ fields terminated by ','
         ctfile.close()
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
         return sqlLoaderCommand
+        
+    def getHintStatement(self, hints):
+        if len(hints):
+            return '/*+ ' + ' '.join(hints) + ' */'
+        return ''
+        
+    def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition, numProcesses = 6):
+        return 'SELECT ' + self.getSelectColumns('*') + """ 
+        FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(
+""" + self.getSelectStatement(approxTable, self.getHintStatement([self.getParallelString(numProcesses)]), self.getSelectColumns(columnsPIP)) + """), 
+MDSYS.SDO_GEOMETRY('""" + self.wkt + """', """ + str(self.srid) + """), """ + str(self.tolerance) +"""))
+""" + condition
+     
+    def getAlias(self, column, alias = ''):
+        if alias:
+            return column + ' AS ' + alias
+        return column
+        
+    def getSelectColumns(self, columns):
+        if columns == '*':
+            return columns
+        else:
+            return ', '.join(columns)
 
 def getTime(granularity, start, end):
     if start == None and end == None:
@@ -595,6 +622,7 @@ def format_lst(lst):
                  
 if __name__ == "__main__":
     configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/dxyt_10000_part1.ini'
+#    os.system('python -m pointcloud.createQueryTable ' + configuration)
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []
     querier = Querier(configuration)
