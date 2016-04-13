@@ -158,7 +158,7 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 if self.qtype.lower() == 'space':
                     coarser = 0 #0
                 else:
-                    coarser = 5 #4
+                    coarser = 4 #4
             
             elif self.case == 2: #lxyzt
                 geometry = Polygon3D(Polygon(self.list2ScaleOffset(ordinates)), zmin, zmax)
@@ -588,7 +588,7 @@ fields terminated by ','
             return '/*+ ' + ' '.join(hints) + ' */'
         return ''
         
-    def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition, numProcesses = 6):
+    def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition, numProcesses = 1):
         return 'SELECT ' + self.getSelectColumns('*') + """ 
         FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(
 """ + self.getSelectStatement(approxTable, self.getHintStatement([self.getParallelString(numProcesses)]), self.getSelectColumns(columnsPIP)) + """), 
@@ -622,8 +622,8 @@ def format_lst(lst):
                  
                  
 if __name__ == "__main__":
-    configuration = '/home/stella/thesis/ini/zandmotor/lxyt_1_part1.ini'
-#    os.system('python -m pointcloud.createQueryTable ' + configuration)
+    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/zandmotor/lxyt_1_part1.ini'
+    os.system('python -m pointcloud.createQueryTable ' + configuration)
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []
     querier = Querier(configuration)
@@ -639,8 +639,10 @@ if __name__ == "__main__":
         lst.insert(0, num)
         queries.append(lst)
         print tabulate([lst], hquery, tablefmt="plain")
-#    for num in querier.ids:
-#        ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
-#        ora.dropTable(cursor, querier.rangeTable + str(num))
+
+    for num in querier.ids:
+        ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
+        if querier.integration == 'deep':
+            ora.dropTable(cursor, querier.rangeTable + str(num))
     print
     print tabulate(queries, hquery, tablefmt="plain")

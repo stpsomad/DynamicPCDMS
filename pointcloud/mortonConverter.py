@@ -94,6 +94,8 @@ def converter(ini_file):
             fh = open(file[file.rfind('/') + 1:file.rfind('.')] + '.txt', 'w')
             fh.write(a)
             fh.close()
+            
+    #ugly workaround, how else?
     f = open('morton_timer.txt', 'a')
     f.write(str(counter))
     f.close()
