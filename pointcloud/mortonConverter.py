@@ -13,6 +13,7 @@ from pointcloud.general import getFiles, OFFSET_ZANDMOTOR, OFFSET_COASTLINE, SCA
 import pointcloud.reader as reader
 import numpy as np
 import sys
+import time
 
 def perform(function, *args):
     return function(*args)
@@ -65,8 +66,9 @@ def converter(ini_file):
     
     index = True
     init = initialise.init
-
+    counter = 0
     for cfile in files:
+        start = time.time()
         f = reader.readFileLaspy(cfile)
         minxyz, maxxyz = reader.getMinMaxLaspy(f)
         t = parseTimeFromFilename(cfile, initialise.dataset)
@@ -85,12 +87,17 @@ def converter(ini_file):
             init = False
         
         a = formatMorton(morton)
+        counter += (time.time() - start)
         if initialise.loader == 'sqlldr':
             print a
         else:
             fh = open(file[file.rfind('/') + 1:file.rfind('.')] + '.txt', 'w')
             fh.write(a)
             fh.close()
+    f = open('morton_timer.txt', 'a')
+    f.write(str(counter))
+    f.close()
+    return counter
 
 def formatMorton(lst):
     return '\n'.join([', '.join(map(str,i)) for i in lst])

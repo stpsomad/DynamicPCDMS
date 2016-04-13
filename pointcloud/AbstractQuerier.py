@@ -158,7 +158,7 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 if self.qtype.lower() == 'space':
                     coarser = 0 #0
                 else:
-                    coarser = 4 #4
+                    coarser = 5 #4
             
             elif self.case == 2: #lxyzt
                 geometry = Polygon3D(Polygon(self.list2ScaleOffset(ordinates)), zmin, zmax)
@@ -173,7 +173,7 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 if times[0][1] is None:
                     continuous = False
                     times[0][1] = times[0][0]
-                    coarser = 8 #1
+                    coarser = 5 #1
                 elif self.qtype.lower() == 'space':
                     coarser = 1 #-2
                 else:
@@ -251,7 +251,7 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
         (b) join: The table is joined explicitly with a table containing the 
         ranges."""
         if geometry == []:
-            mortonWhere, self.mortonJoinWhere, ranges, self.rangeTable, morPrep, insert = ('', '', 0, None, 0, 0)
+            mortonWhere, self.mortonJoinWhere, ranges, rangeTab, morPrep, insert = ('', '', 0, None, 0, 0)
         else:
             if self.method == 'join':
                 rangeTab = (self.rangeTable + qid).upper()
@@ -382,6 +382,7 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
             else:
                 query = self.getCTASStatement(queryTab) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere) + ')'
+
 #                query = """CREATE TABLE {0} AS (SELECT /*+ PARALLEL(6) */ * 
 #FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(SELECT X, Y, Z, TIME from {1}), 
 #MDSYS.SDO_GEOMETRY('{2}', {3}), {4})) {5})""".format(queryTab, tempName, self.wkt, self.srid, self.tolerance, zWhere)
@@ -429,6 +430,7 @@ from {1} t {2}""".format(', '.join(self.columnNames), self.iotTableName, whereSt
             start1 = time.time()
             ora.mogrifyExecute(cursor, query)
             result = cursor.fetchall()
+
             lst.append(round(time.time() - start1, 10)) # fetching
             
             if (self.integration == 'loose' and self.qtype.lower() != 'time') or self.integration == 'deep':
@@ -439,11 +441,10 @@ from {1} t {2}""".format(', '.join(self.columnNames), self.iotTableName, whereSt
             start1 = time.time()
             decoded = self.decodeSpaceTime(result)
             lst.append(round(time.time() - start1, 6)) #decoding
-            
-            start1 = time.time()
-            res = self.storeQuery( qTable, self.queryColumns, decoded, True)
-            lst.append(round(time.time() - start1, 6)) #storing
 
+            start1 = time.time()
+            res = self.storeQuery(qTable, self.queryColumns, decoded, True)
+            lst.append(round(time.time() - start1, 6)) #storing
             if res != []:
                 ptsInTemp = res
                 lst.append(res) #approximate points
@@ -478,7 +479,7 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
                     start1 = time.time()
                     cursor.execute(query)
                     end = round(time.time() - start1, 2)
-                    
+                    print query
                     ora.dropTable(cursor, qTable, False)
                     final = ora.getNumPoints(connection, cursor, queryTab)
                     lst.append(final) #final points
@@ -621,7 +622,7 @@ def format_lst(lst):
                  
                  
 if __name__ == "__main__":
-    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/dxyt_10000_part1.ini'
+    configuration = '/home/stella/thesis/pointcloud/ini/zandmotor/lxyt_1_part1.ini'
 #    os.system('python -m pointcloud.createQueryTable ' + configuration)
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []

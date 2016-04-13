@@ -11,12 +11,12 @@ import time
 from tabulate import tabulate
 #import pointcloud.oracleTools as ora
 
-dataset = 'coastline'
+dataset = 'zandmotor'
 benchmark = ['mini', 'medium', 'full']  
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
 
-integrations = ['dxyt']
-scalings = ['100000']
+integrations = ['lxyt']
+scalings = ['1']
 
 
 for integr in integrations:
