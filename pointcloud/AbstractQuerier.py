@@ -622,7 +622,7 @@ def format_lst(lst):
                  
                  
 if __name__ == "__main__":
-    configuration = '/home/stella/thesis/pointcloud/ini/zandmotor/lxyt_1_part1.ini'
+    configuration = '/home/stella/thesis/ini/zandmotor/lxyt_1_part1.ini'
 #    os.system('python -m pointcloud.createQueryTable ' + configuration)
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []
