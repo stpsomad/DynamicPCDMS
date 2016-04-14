@@ -169,8 +169,7 @@ END;""")
 
         commnandsqlldr = self.sqlldr(self.tableName)
         command = """python -m pointcloud.mortonConverter {0} | """.format(configuration) + commnandsqlldr
-        timer = os.system(command)
-        print timer
+        os.system(command)
         
     def sqlldrLoading(self, connection):
         cursor = connection.cursor()

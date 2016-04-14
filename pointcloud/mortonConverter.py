@@ -98,6 +98,7 @@ def converter(ini_file):
     #ugly workaround, how else?
     f = open('morton_timer.txt', 'a')
     f.write(str(counter))
+    f.write(str('\n'))
     f.close()
     return counter
 

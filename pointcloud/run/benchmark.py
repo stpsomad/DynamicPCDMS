@@ -11,12 +11,12 @@ import time
 from tabulate import tabulate
 #import pointcloud.oracleTools as ora
 
-dataset = 'zandmotor'
+dataset = 'coastline'
 benchmark = ['mini', 'medium', 'full']  
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
 
-integrations = ['lxyt']
-scalings = ['1']
+integrations = ['dxyt']
+scalings = ['10000']
 
 
 for integr in integrations:
@@ -48,7 +48,7 @@ for integr in integrations:
             loadings.append(loading)
             print tabulate(loadings, hloading, tablefmt="plain")
             
-    
+#    
 #    print 'writing to file statistics for case: {0} {1} {2}'.format(bulk.integration, bulk.parse, bulk.scale)
 #    f = open('test.txt', 'a')
 #    f.write('Statistics for case: {0} {1} {2}\n'.format(bulk.integration, bulk.parse, bulk.scale))

@@ -19,6 +19,9 @@ from numba import jit, int32, int64
 def Expand2D(n):
     """Encoding the 64 bit morton code for two 31 bit numbers. 1 bit is not used
     because the integers are not unsigned"""
+    if n < 0:
+        raise Exception("""ERROR: Morton code is calculated only for positive \
+numbers""")
     b = n & 0x7fffffff                         
     b = (b ^ (b <<  16)) & 0x0000ffff0000ffff 
     b = (b ^ (b <<  8))  & 0x00ff00ff00ff00ff 
@@ -33,6 +36,8 @@ def EncodeMorton2D(x, y):
 
 @jit(int32(int64))
 def Compact2D(m):
+    if m < 0:
+        raise Exception("""ERROR: Morton code is always positive""")
     m &= 0x5555555555555555
     m = (m ^ (m >> 1))  & 0x3333333333333333
     m = (m ^ (m >> 2))  & 0x0f0f0f0f0f0f0f0f
@@ -61,6 +66,9 @@ def Expand3D_21bit(x):
     enough.
     
     Source: Stackoverflow: http://bit.ly/1YrXQdj by user Gabriel"""
+    if x < 0:
+        raise Exception("""ERROR: Morton code is calculated only for positive \
+numbers""")
     x = (x ^ (x << 32)) & 0x7fff00000000ffff 
     x = (x ^ (x << 16)) & 0x00ff0000ff0000ff
     x = (x ^ (x <<  8)) & 0x700f00f00f00f00f
@@ -72,6 +80,8 @@ def Expand3D_21bit(x):
 def Compact3D_21bit(x):
     """Decoding the 3D Morton made from the 21 bit numbers.
     Not used here because it is not enough."""
+    if x < 0:
+        raise Exception("""ERROR: Morton code is always positive""")
     x &= 0x1249249249249249
     x = (x ^ (x >> 2)) & 0x30c30c30c30c30c3
     x = (x ^ (x >> 4)) & 0x700f00f00f00f00f
@@ -107,6 +117,9 @@ def Expand3D(x):
     code. 
     
     Source: Stackoverflow: http://bit.ly/1YrXQdj by user Gabriel"""
+    if x < 0:
+        raise Exception("""ERROR: Morton code is calculated only for positive \
+numbers""")
     x &= 0x7fffffffL
     x = (x ^ x << 32) & 0x7fff00000000ffffL
     x = (x ^ x << 16) & 0x7f0000ff0000ff0000ffL
@@ -119,6 +132,8 @@ def EncodeMorton3D(x, y, z):
     return Expand3D(x) + (Expand3D(y) << 1) + (Expand3D(z) << 2)
 
 def Compact3D(x):
+    if x < 0:
+        raise Exception("""ERROR: Morton code is always positive""")
     x &= 0x49249249249249249249249L
     x = (x ^ (x >> 2)) & 0x430c30c30c30c30c30c30c3L
     x = (x ^ (x >> 4)) & 0x700f00f00f00f00f00f00fL
@@ -146,6 +161,9 @@ def Expand4D(x):
     in 4D. 
     
     Source: Stackoverflow: http://bit.ly/1YrXQdj by user Gabriel"""
+    if x < 0:
+        raise Exception("""ERROR: Morton code is calculated only for positive \
+numbers""")
     x &= 0x7fffffffL
     x = (x ^ x << 64) & 0x7fc0000000000000003fffffL
     x = (x ^ x << 32) & 0x7fc00000003ff800000007ffL
@@ -160,6 +178,8 @@ def EncodeMorton4D(x, y, z, t):
     return Expand4D(x) + (Expand4D(y) << 1) + (Expand4D(z) << 2) + (Expand4D(t) << 3)
 
 def Compact4D(x):
+    if x < 0:
+        raise Exception("""ERROR: Morton code is always positive""")
     x &= 0x1111111111111111111111111111111L
     x = (x ^ (x >> 1)) & 0x1090909090909090909090909090909L
     x = (x ^ (x >> 2)) & 0x430843084308430843084308430843L
