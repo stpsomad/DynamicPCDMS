@@ -111,7 +111,7 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
 
         self.qtype, self.wkt, self.start_date, self.end_date, self.timeType, self.ozmin, self.ozmax  = cursor.fetchall()[0]
 
-        if self.wkt != None:
+        if self.wkt is not None:
             self.wkt = str(self.wkt)
         connection.close()
         

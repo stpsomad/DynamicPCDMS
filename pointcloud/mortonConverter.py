@@ -75,9 +75,7 @@ def converter(ini_file):
         updateMetaTable(connection, cursor, initialise.metaTable, SRID, minxyz[0], minxyz[1], minxyz[2], maxxyz[0], maxxyz[1], maxxyz[2], t, scalex, scaley, scalez, offx, offy, offz, init)
         
         
-        ###timer?        
         morton = perform(funct, f, t * initialise.scale, *args)
-        ####
         index = False 
         
         #Making sure the meta is not initialised again
