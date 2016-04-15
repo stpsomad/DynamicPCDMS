@@ -84,10 +84,10 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
         self.mortonJoinWhere = '(t.morton BETWEEN r.low AND r.upper)'
         if self.granularity == 'day':
             self.queryColumns = ['time VARCHAR2(20)', 'X NUMBER', 'Y NUMBER', 'Z FLOAT']
-            params = [0, 4, 4, 3, 1, -2, 0, 3, 4, 0, 0, 4, 3, 0, 3, 4, 1, 4]
+            self.params = [0, 4, 4, 3, 1, -2, 0, 3, 4, 0, 0, 4, 3, 0, 3, 4, 1, 4]
         else:
             self.queryColumns = ['time INTEGER', 'X NUMBER','Y NUMBER', 'Z FLOAT']
-            params = [0, 4, 4, 3, 8, 1, 2, 8, 9, 2, 2, 9]
+            self.params = [0, 4, 4, 3, 8, 1, 2, 8, 9, 2, 2, 9, 7, 3, 8, 12, 3, 11]
             
         self.ozmin, self.ozmax  = 0, 0
         self.wkt = None
@@ -156,33 +156,34 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
             if self.case == 1: #lxyt
                 geometry = Polygon(self.list2ScaleOffset(ordinates)).wkt
                 if self.qtype.lower() == 'space':
-                    coarser = 0 #0, 0
+                    coarser = self.params[0] #0, 0
                 else:
-                    coarser = 4 #4, 4
+                    coarser = self.params[1] #4, 4
             
             elif self.case == 2: #lxyzt
                 geometry = Polygon3D(Polygon(self.list2ScaleOffset(ordinates)), zmin, zmax)
 
                 if self.qtype.lower() == 'space':
-                    coarser = 4 #4, 4
+                    coarser = self.params[2] #4, 4
                 else:
-                    coarser = 3 #3, 3
+                    coarser = self.params[3] #3, 3
 
             elif self.case == 3: #dxyt
                 geom = Polygon(self.list2ScaleOffset(ordinates))                
                 if times[0][1] is None:
                     continuous = False
                     times[0][1] = times[0][0]
-                    coarser = 8 #1, 8
+                    coarser = self.params[4] #1, 8
                 elif self.qtype.lower() == 'space':
-                    coarser = 1 #-2, 1
-                else:
-                    coarser = 2 #0, 2
+                    coarser = self.params[5] #-2, 1
+                elif self.timeType == 'continuous':
+                    coarser = self.params[6] #0, 2
+                elif self.timeType == 'discrete':
+                    coarser = self.params[7] #3, 8
                     
                 if self.timeType == 'discrete' and (self.start_date is not None) and (self.end_date is not None):
                     geometry = [dynamicPolygon(geom, times[0][0], times[0][0]),
                                 dynamicPolygon(geom, times[0][1], times[0][1])]
-                    coarser = 8 #3, 8
                 else:
                     geometry = dynamicPolygon(geom, times[0][0], times[0][1])                    
                 
@@ -190,17 +191,18 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 geom = Polygon(self.list2ScaleOffset(ordinates))
                 if times[0][1] == None:
                     continuous = False
-                    coarser = 9 #4, 9
+                    coarser = self.params[8] #4, 9
                     times[0][1] = times[0][0]
                 elif self.qtype.lower() == 'space':
-                    coarser = 2 #0, 2
-                else:
-                    coarser = 2 #0, 2
+                    coarser = self.params[9] #0, 2
+                elif self.timeType == 'continuous':
+                    coarser = self.params[10] #0, 2
+                elif self.timeType == 'discrete':
+                    coarser = self.params[11] #4, 9
                 
                 if self.timeType == 'discrete' and self.start_date is not None and self.end_date is not None:
                     geometry = [Polygon4D(geom, zmin, zmax, times[0][0], times[0][0]),
                                 Polygon4D(geom, zmin, zmax, times[0][1], times[0][1])]
-                    coarser = 9 #4, 9
                 else:
                     geometry = Polygon4D(geom, zmin, zmax, times[0][0], times[0][1])
                 
@@ -217,14 +219,13 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 
                 if times[0][1] is None:
                     times[0][1] = times[0][0]
-                    coarser = 7 #3
+                    coarser = self.params[12] #3, 7
                     continuous = False
                 elif self.timeType == 'continuous':
-                    coarser = 3 #0, 3
+                    coarser = self.params[13] #0, 3
                 else:
-                    coarser = 2 #3
+                    coarser = self.params[14] #3, 8
                 
-                 
                 if self.timeType == 'discrete' and self.start_date is not None and self.end_date is not None:
                     geometry = [dynamicPolygon(geom, times[0][0], times[0][0]),
                                 dynamicPolygon(geom, times[0][1], times[0][1])]
@@ -236,14 +237,16 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 geom = box(temp_geom[0][0], temp_geom[0][1], temp_geom[1][0], temp_geom[1][1])
                 if times[0][1] is None:
                     times[0][1] = times[0][0]
-                    coarser = 10 #4
-                else:
-                    coarser = 10 #1          
+                    coarser = self.params[15] #4, 12
+                    continuous = False
+                elif self.timeType == 'continuous':
+                    coarser = self.params[16] #1, 3
+                elif self.timeType == 'discrete':
+                    coarser = self.params[17] #4, 11
                 
                 if self.timeType == 'discrete' and self.start_date is not None and self.end_date is not None:
                     geometry = [Polygon4D(geom, zmin, zmax, times[0][0], times[0][0]),
                                 Polygon4D(geom, zmin, zmax, times[0][1], times[0][1])]
-                    coarser = 10 #4
                 else:           
                     geometry = Polygon4D(geom, zmin, zmax, times[0][0], times[0][1])
                     
@@ -625,7 +628,7 @@ def format_lst(lst):
                  
                  
 if __name__ == "__main__":
-    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/dxyt_10000_part1.ini'
+    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/dxyzt_10000_part1.ini'
 #    os.system('python -m pointcloud.createQueryTable ' + configuration)
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []
@@ -643,9 +646,9 @@ if __name__ == "__main__":
         queries.append(lst)
         print tabulate([lst], hquery, tablefmt="plain")
 
-#    for num in querier.ids:
-#        ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
-#        if querier.integration == 'deep':
-#            ora.dropTable(cursor, querier.rangeTable + str(num))
+    for num in querier.ids:
+        ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
+        if querier.integration == 'deep':
+            ora.dropTable(cursor, querier.rangeTable + str(num))
     print
     print tabulate(queries, hquery, tablefmt="plain")

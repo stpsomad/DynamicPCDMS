@@ -54,7 +54,7 @@ DIRS = {
     'part1': 'D:/Dropbox/Thesis/Thesis/Data/Zandmotor_bench/part1/',
     'part2': 'D:/Dropbox/Thesis/Thesis/Data/Zandmotor_bench/part2/',
     'part3': 'D:/Dropbox/Thesis/Thesis/Data/Zandmotor_bench/part3/',
-    'cmini': 'D:/Dropbox/Thesis/Thesis/Data/Coastline_bench/mini/extraMini/',
+    'cmini': 'D:/Dropbox/Thesis/Thesis/Data/Coastline_bench/mini/',
     'cmedium': 'D:/Dropbox/Thesis/Thesis/Data/Coastline_bench/medium/',
     'clarge': 'D:/Dropbox/Thesis/Thesis/Data/Coastline_bench/large/'}
 
