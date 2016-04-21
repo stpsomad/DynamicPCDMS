@@ -51,13 +51,13 @@ EQ_DIM = {
 }
 
 DIRS = {
-    'part1': 'D:/Dropbox/Thesis/Thesis/Data/Zandmotor_bench/part1/',
-    'part2': 'D:/Dropbox/Thesis/Thesis/Data/Zandmotor_bench/part2/',
-    'part3': 'D:/Dropbox/Thesis/Thesis/Data/Zandmotor_bench/part3/',
-    'cmini': 'D:/Dropbox/Thesis/Thesis/Data/Coastline_bench/mini/',
-    'cmedium': 'D:/Dropbox/Thesis/Thesis/Data/Coastline_bench/medium/',
-    'clarge': 'D:/Dropbox/Thesis/Thesis/Data/Coastline_bench/large/'}
-
+    'part1': '/pak2/usrdata/stella/Zandmotor_bench/part1/',
+    'part2': '/pak2/usrdata/stella/Zandmotor_bench/part2/',
+    'part3': '/pak2/usrdata/stella/Zandmotor_bench/part3/',
+    'cmini': '/pak2/usrdata/stella/Coastline_bench/mini/',
+    'cmedium': '/pak2/usrdata/stella/Coastline_bench/medium/',
+    'clarge': '/pak2/usrdata/stella/Coastline_bench/large/'}
+    
 def getFiles(inputElement, extensions = PC_FILE_FORMATS, recursive = False):
     """ Get the list of files with certain extensions contained in the folder 
     (and possible subfolders) given by inputElement. 
