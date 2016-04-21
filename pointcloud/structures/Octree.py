@@ -9,8 +9,6 @@ import numpy
 import math
 from pointcloud.structures.geometry import Cube, Point3D
 
-MAX_NUMBITS = 28
-
 class Octree:
     def __init__(self, domain, numLevels, numBits):
         if min(domain) < 0:
@@ -48,12 +46,6 @@ class Octree:
             self.startOctCode = 0
             self.startOct = parentOctant
             
-#        print 'domain', domain
-#        print 'domain numBits', self.numBits
-#        print 'octree numLevels', self.numLevels
-#        print 'octree startLevel', self.startLevel
-#        print 'octree startOctCode', self.startOctCode
-#        print 'octree startOct', self.startOct
             
     def _relation(self, geom1, geom2):
         """ Returns the relationship between two geometries. 
@@ -192,9 +184,10 @@ class Octree:
     def getMortonRanges(self, region, coarser, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
         codes = self.overlapCodes(region, coarser, numLevels)
         if distinctIn:
-            mmranges = self.getAllRanges(codes)
-            mxmranges = self.mergeConsecutiveRanges(mmranges)
-            return (mxmranges, len(codes))
+            (imranges, xmranges) = self.getDiffRanges(codes)
+            mimranges = self.mergeConsecutiveRanges(imranges)
+            mxmranges = self.mergeConsecutiveRanges(xmranges)
+            return (mimranges, mxmranges)
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
