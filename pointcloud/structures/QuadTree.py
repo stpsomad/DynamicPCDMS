@@ -11,12 +11,16 @@ from shapely.geometry import box
 from de9im.patterns import intersects, contains, pattern
 excluding_interiors = pattern('F********')
 import pointcloud.morton as morton
-# maximum number of bits for X and Y
-MAX_NUMBITS = 28
-    
+
 class QuadTree:
     """ QuadTree class """
     def __init__(self, domain, numLevels, numBits):
+        """ Initialises a Quadtree object.
+        Input:
+        - domain of the Quadtree (2D)
+        - Number of levels (Use auto or a positive number.)
+        - number of bits to used for the Quadtree"""
+        
         if min(domain) < 0:
             raise Exception('ERROR: Domain must contain only positive X and Y numbers!')
         self.numBits = numBits
@@ -51,12 +55,6 @@ class QuadTree:
             self.startQuadCode = 0
             self.startQuad = parentQuad
         
-#        print 'domain', domain
-#        print 'domain numBits', self.numBits
-#        print 'quadtree numLevels', self.numLevels
-#        print 'quadtree startLevel', self.startLevel
-#        print 'quadtree startQuadCode', self.startQuadCode
-#        print 'quadtree startQuad', self.startQuad
         
     def _relation(self, geom1, geom2):
         """ Returns the relationship between two geometries. 
@@ -196,9 +194,13 @@ class QuadTree:
     def getMortonRanges(self, wkt, coarser, continuous = False, distinctIn = False, numLevels = None, maxRanges = None):
         codes = self.overlapCodes(loads(wkt), coarser, numLevels)
         if distinctIn:
-            maxmranges = self.getAllRanges(codes)
-            mxmranges = self.mergeConsecutiveRanges(maxmranges)
-            return (mxmranges, len(codes))
+            (imranges, xmranges) = self.getDiffRanges(codes)
+            mimranges = self.mergeConsecutiveRanges(imranges)
+            mxmranges = self.mergeConsecutiveRanges(xmranges)
+            return (mimranges, mxmranges)
+#        if unMerged:
+#            mxmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
+#            return (mxmranges, len(codes))
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
