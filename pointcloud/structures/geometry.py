@@ -14,6 +14,7 @@ excluding_interiors = pattern('F********')
 #==============================================================================
 
 class Point3D(object):
+    """Creates a 3D point from x, y and z spatial coordinates."""
     def __init__(self, x, y, z):
         self.x = x
         self.y = y
@@ -21,6 +22,8 @@ class Point3D(object):
 
 
 class Point4D(object):
+    """Creates a 4D point (dynamic) by combining time and x, y and z (spatial) 
+    coordinates."""
     def __init__(self, t, x, y, z):
         self.t = t
         self.x = x
@@ -29,6 +32,7 @@ class Point4D(object):
 
 
 class dynamicPoint(object):
+    """Creates a dynamic 2D point by combining the time and x, y coordinates."""
     def __init__(self, t, x, y):
         self.t = t
         self.x = x
@@ -50,37 +54,48 @@ class Cube(object):
         self.ur = pt_ur
         
     def volume(self):
+        """Returns the volume of the cube in the input units."""
         return (self.ur.x - self.ll.x)*(self.ur.y - self.ll.y)*(self.ur.z - self.ll.z)
         
     def getWkt(self):
+        """Returns the wkt of the cube when projected to the xy plane."""
         return box(self.ll.x, self.ll.y, self.ur.x, self.ur.y)
     
     def relationship(self, other):
-        """ self = geom1
-            other = geom2
-            0 if they are disjoint
-            1 if geom2 completely in geom1
-            2 if there is some intersection between geom1 and geom2"""        
+        """Returns the topological relation ship between two 3D objects.
+        
+        The relevant relationships for this application are:
+        * disjoint (returns 0)
+        * within (returns 1)
+        * overlap (returns 2)"""        
         
         if isinstance(other, Cube):
-            if self.ll.x <= other.ll.x and self.ur.x >= other.ur.x and self.ll.y <= other.ll.y and self.ur.y >= other.ur.y:
+            """Relationship between two cubes."""
+            if self.ll.x <= other.ll.x and self.ur.x >= other.ur.x and \
+            self.ll.y <= other.ll.y and self.ur.y >= other.ur.y:
                 if self.ll.z <= other.ll.z and self.ur.z >= other.ur.z:
-                    return 1
+                    return 1 #w ithin
                 elif self.ll.z >= other.ur.z or self.ur.z <= other.ll.z:
-                    return 0
+                    return 0 # disjoint
                 else:
-                    return 2
-            elif self.ll.x >= other.ur.x or self.ll.y >= other.ur.y or self.ll.z >= other.ur.z or self.ur.x <= other.ll.x or self.ur.y <= other.ll.y or self.ur.z <= other.ll.z:            
-                return 0
-            return 2
+                    return 2 # overlap
+            elif self.ll.x >= other.ur.x or self.ll.y >= other.ur.y or \
+            self.ll.z >= other.ur.z or self.ur.x <= other.ll.x or \
+            self.ur.y <= other.ll.y or self.ur.z <= other.ll.z:            
+                return 0 # disjoint
+            return 2 # overlap
             
         elif isinstance(other, Sphere):
-            if self.ll.x <= other.ctr.x - other.radius and self.ll.y <= other.ctr.y - other.radius and self.ll.z <= other.ctr.z - other.radius and self.ur.x >= other.ctr.x + other.radius and self.ur.y >= other.ctr.y + other.radius and self.ur.z >= other.ctr.z + other.radius:
-                return 1
+            """Relationship of a cube and a sphere.
+            Source: A SIMPLE METHOD FOR BOX – SPHERE INTERSECTION TESTING
+            James Arvo - Graphic Gems 1
+            C code in http://www.realtimerendering.com/resources/GraphicsGems/gems/BoxSphere.cs"""
             
-            # Source: A SIMPLE METHOD FOR BOX – SPHERE INTERSECTION TESTING
-            # James Arvo - Graphic Gems 1
-            # C code in http://www.realtimerendering.com/resources/GraphicsGems/gems/BoxSphere.cs
+            if self.ll.x <= other.ctr.x - other.radius and self.ll.y <= other.ctr.y - other.radius and \
+            self.ll.z <= other.ctr.z - other.radius and self.ur.x >= other.ctr.x + other.radius and \
+            self.ur.y >= other.ctr.y + other.radius and self.ur.z >= other.ctr.z + other.radius:
+                return 1 # within
+            
             d = 0            
             if other.ctr.x < self.ll.x:
                 e = other.ctr.x - self.ll.x
@@ -103,62 +118,81 @@ class Cube(object):
                 d += e**2
                 
             if d >= other.radius**2:
-                return 0
-            return 2
+                return 0 # disjoint
+            return 2 # overlap
             
         elif isinstance(other, Polygon3D):
-            geom1 = self.getWkt()
-            minz, maxz = self.ll.z, self.ur.z
-            relation = geom1.relate(other.wkt)
+            """Relationship of a cube and a 3D polygon. 
+            
+            Uses the 2D intersection model to establish the relationship."""
+            geom1, minz, maxz = self.getWkt(), self.ll.z, self.ur.z
+            relation = geom1.relate(other.wkt) #relationship in 2D
+            
             if not intersects.matches(relation):
-                return 0 # they are disjoint
+                return 0 # disjoint
             elif contains.matches(relation):
                 if  minz <= other.zmin <= maxz and minz <= other.zmax <= maxz:
-                    return 1
+                    return 1 # within
                 elif maxz < other.zmax or minz > other.zmin:
-                    return 0
+                    return 0 # disjoint
                 else:
-                    return 2
-            else: # there is some overlap
+                    return 2 # disjoint
+            else: # overlap
                 if excluding_interiors.matches(relation):
                     return 0 # overlap only in boundaries, we do not count it
                 else:
                     if maxz < other.zmin or minz > other.zmax:
-                        return 0
+                        return 0 # disjoint
                     else:
                         return 2 # some interior of geom2 is in geom1
     
 class Polygon3D(object):
     def __init__(self, wkt, zmin, zmax):
+        """3D Polygon constructor. 
+        
+        Takes the wkt in the xy plane and the minimum and maximum height to 
+        construct a 3D Polygon.
+        """
         self.wkt = wkt
         self.zmin = zmin
         self.zmax = zmax
         
     def volume(self):
+        """Returns the volume of the Polygon."""
         return self.wkt.area * (self.zmax - self.zmin)
         
     def relationship(self, other):
-        """ self = geom1
-            other = geom2
-            0 if they are disjoint
-            1 if geom2 completely in geom1""" 
+        """ Relationship between a 3D polygon and a cube.
+        
+        The relevant relationships for this application are:
+        * disjoint (returns 0)
+        * within (returns 1)
+        * overlap (returns 2)""" 
         if isinstance(other, Cube):
             return other.relationship(self)
 
 class Sphere(object):
     def __init__(self, pt_ctr, radius):
+        """Sphere constructor. 
+        
+        Takes the center of the sphere (as 3D Point) and the radius to construct
+        a Sphere
+        """
         assert isinstance(pt_ctr, Point3D)
         self.ctr = pt_ctr
         self.radius = radius
         
-    def volume(self): 
+    def volume(self):
+        """Returns the volume of the Sphere."""
         return (4 / 3.0) * pi * self.radius**3
         
     def relationship(self, other):
-        """ self = geom1
-            other = geom2
-            0 if they are disjoint
-            1 if geom2 completely in geom1""" 
+        """Relationship of a cube and a Sphere. 
+            
+        The relevant relationships for this application are:
+        * disjoint (returns 0)
+        * within (returns 1)
+        * overlap (returns 2)"""
         if isinstance(other, Cube):
             return other.relationship(self)
             
@@ -171,7 +205,9 @@ class Sphere(object):
 class dynamicCube(object):
     def __init__(self, pt_ll, pt_ur):
         """Constructor. 
-        Takes the lower left and upper right point defining the Cube.
+        
+        Takes the lower left and upper right point (as dynamic Points) and 
+        defines a dunamic Cube.
         """
         assert isinstance(pt_ll, dynamicPoint)
         assert isinstance(pt_ur, dynamicPoint)
@@ -179,30 +215,43 @@ class dynamicCube(object):
         self.ur = pt_ur
 
     def volume(self):
+        """ Returns the volume of the dynamic Cube."""
         return (self.ur.t - self.ll.t)*(self.ur.x - self.ll.x)*(self.ur.y - self.ll.y)
 
     def area(self):
+        """ Returns the area in the xy plane of the dynamic Cube."""
         return (self.ur.x - self.ll.x)*(self.ur.y - self.ll.y)
     
     def wkt2D(self):
+        """ Returns the wkt representation in the xy plane of the dynamic Cube."""
         return box(self.ll.x, self.ll.y, self.ur.x, self.ur.y)
         
     def  relationship(self, other):
+        """Returns the topological relationship between two dynamic objects.
+        
+        The relevant relationships for this application are:
+        * disjoint (returns 0)
+        * within (returns 1)
+        * overlap (returns 2)"""  
+        
         if isinstance(other, dynamicCube):
+            """Relationship of two dynamic Cubes."""
             if self.ll.x <= other.ll.x and self.ur.x >= other.ur.x and self.ll.y <= other.ll.y and self.ur.y >= other.ur.y:
                 if self.ll.t <= other.ll.t and self.ur.t >= other.ur.t:
-                    return 1
+                    return 1 # within
                 elif self.ll.t >= other.ur.t or self.ur.t <= other.ll.t:
-                    return 0
+                    return 0 # disjoint
                 else:
-                    return 2
+                    return 2 # overlap
             elif self.ll.x >= other.ur.x or self.ll.y >= other.ur.y or self.ll.z >= other.ur.z or self.ur.x <= other.ll.x or self.ur.y <= other.ll.y or self.ur.z <= other.ll.z:            
-                return 0
+                return 0 # disjoint
             else:
-                return 2
+                return 2 # overlap
             
         elif isinstance(other, dynamicPolygon):
-            """Uses the 2D DE9IM topological relationships in order to check the x and y dimensions.
+            """ Relationship of a dynamic Cube and a dynamic Polygon.
+            
+            Uses the 2D DE9IM topological relationships in order to check the x and y dimensions.
             It is assumed that the time dimension will be given as upper - lower boundary."""
             geom1 = self.wkt2D()
             relation = geom1.relate(other.wkt)
@@ -227,24 +276,31 @@ class dynamicCube(object):
 
 class dynamicPolygon(object):
     def __init__(self, wkt, tmin, tmax):
+        """dynamic Polygon constructor. 
+        
+        Takes the wkt in the xy plane and the minimum and maximum time to 
+        construct a dynamic Polygon.
+        """
         self.wkt = wkt
         self.tmin = tmin
         self.tmax = tmax
         
     def relationship(self, other):
-        """ self = geom1
-            other = geom2
-            0 if they are disjoint
-            1 if geom2 completely in geom1""" 
+        """Relationship of a dynamic polygon and a dynamic Cube. 
+            
+        The relevant relationships for this application are:
+        * disjoint (returns 0)
+        * within (returns 1)
+        * overlap (returns 2)"""
         if isinstance(other, dynamicCube):
             return other.relationship(self)
         
     def volume(self):
-#        if self.tmax - self.tmin == 0:
-#            return self.wkt.area
+        """Returns the volume of the dynamic Polygon."""
         return self.wkt.area * (self.tmax - self.tmin)
     
     def area(self):
+        """ Returns the area in the 2D plane."""
         return self.wkt.area
         
         
@@ -253,28 +309,37 @@ class dynamicPolygon(object):
 #==============================================================================
 class Tesseract(object):
     def __init__(self, pt_ll, pt_ur):
-        """Constructor. 
-        Takes the lower left and upper right point defining the Cube.
+        """Tesseract constructor. 
+        
+        Takes the lower left and upper right point (as 4D point) 
+        defining the Tesseract.
         """
         assert isinstance(pt_ll, Point4D)
         assert isinstance(pt_ur, Point4D)
         self.ll = pt_ll
         self.ur = pt_ur
 
-    def width(self):
-        return self.ur.x - self.ll.x
-
     def volume(self):
+        """Returns the 4-volume of the Tesseract."""
         return (self.ur.x - self.ll.x)*(self.ur.y - self.ll.y)*(self.ur.z - self.ll.z)*(self.ur.t - self.ll.t)
     
     def volume3D(self):
+        """Returns the 3-volume of the Tesseract."""
         return (self.ur.x - self.ll.x)*(self.ur.y - self.ll.y)*(self.ur.z - self.ll.z)
         
     def wkt2D(self):
+        """Returns the area of the Tesseract in the xy plane."""
         return box(self.ll.x, self.ll.y, self.ur.x, self.ur.y)
         
     def  relationship(self, other):
+        """Returns the topological relation ship between two 4D objects.
+        
+        The relevant relationships for this application are:
+        * disjoint (returns 0)
+        * within (returns 1)
+        * overlap (returns 2)""" 
         if isinstance(other, Tesseract):
+            """Relationship of two tesseracts."""
             if other.ll.t >= self.ll.t and other.ur.t <= self.ur.t: #self contains other in time
                 if other.ll.x >= self.ll.x and other.ur.x <= self.ur.x and other.ll.y >= self.ll.y and other.ur.y <= self.ur.y:
                     #self contains other in 2d space
@@ -306,7 +371,9 @@ class Tesseract(object):
                         return 2
                 
         elif isinstance(other, Polygon4D):
-            """Uses the 2D DE9IM topological relationships in order to check the x and y dimensions.
+            """ Relationship of a Tesseract and a 4D Polygon.
+            
+            Uses the 2D DE9IM topological relationships in order to check the x and y dimensions.
             It is assumed that the z and time dimension will be given as upper - lower boundary."""
             geom1 = self.wkt2D()
             relation = geom1.relate(other.wkt)
@@ -342,6 +409,11 @@ class Tesseract(object):
             
 class Polygon4D(object):
     def __init__(self, wkt, zmin, zmax, tmin, tmax):
+        """4D Polygon constructor. 
+        
+        Takes the wkt in the xy plane, the minimum and maximum height and the 
+        minimum and maximum time to construct a 4D Polygon.
+        """
         self.wkt = wkt
         self.zmin = zmin
         self.zmax = zmax
@@ -349,14 +421,17 @@ class Polygon4D(object):
         self.tmax = tmax
         
     def relationship(self, other):
-        """ self = geom1
-            other = geom2
-            0 if they are disjoint
-            1 if geom2 completely in geom1""" 
+        """Relationship of a 4D polygon and a Tesseract. 
+            
+        The relevant relationships for this application are:
+        * disjoint (returns 0)
+        * within (returns 1)
+        * overlap (returns 2)""" 
         if isinstance(other, Tesseract):
             return other.relationship(self)
         
     def volume(self):
+        """Returns the 4- or 3- volume depending on the conditions."""
         if self.tmax - self.tmin == 0:
             return self.wkt.area * (self.zmax - self.zmin)
         return self.wkt.area * (self.zmax - self.zmin) * (self.tmax - self.tmin)     
