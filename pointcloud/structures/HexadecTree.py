@@ -4,13 +4,10 @@ Created on Tue Feb 23 20:07:05 2016
 
 @author: Stella Psomadaki
 """
-
 import pointcloud.morton as morton
 import numpy
 import math
 from pointcloud.structures.geometry import Tesseract, Point4D
-
-MAX_NUMBITS = 28
 
 class HexadecTree:
     def __init__(self, domain, numLevels, numBits):
@@ -49,13 +46,7 @@ class HexadecTree:
             self.startHexadecCode = 0
             self.startHexadec = parentHexadectant
             
-#        print 'domain', domain
-#        print 'domain numBits', self.numBits
-#        print 'hexadectree numLevels', self.numLevels
-#        print 'hexadectree startLevel', self.startLevel
-#        print 'hexadectree startHexadecCode', self.startHexadecCode
-#        print 'hexadectree startHexadec', self.startHexadec
-            
+
     def _relation(self, geom1, geom2):
         """ Returns the relationship between two geometries. 
               0 if they are disjoint, 
@@ -70,7 +61,7 @@ class HexadecTree:
         cy = miny + ((maxy - miny) / 2)
         cz = minz + ((maxz - minz) / 2)
         
-                  
+         # Z order hexadectans        
         hexadectans = [
            (mint, minx, miny, minz, ct, cx, cy, cz),   #0
            (ct, minx, miny, minz, maxt, cx, cy, cz),   #1
@@ -206,9 +197,10 @@ class HexadecTree:
     def getMortonRanges(self, region, coarser = 5, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
         codes = self.overlapCodes(region, coarser, continuous)
         if distinctIn:
-            mmranges = self.getAllRanges(codes)
-            mxmranges = self.mergeConsecutiveRanges(mmranges)
-            return (mxmranges, len(codes))
+            (imranges, xmranges) = self.getDiffRanges(codes)
+            mimranges = self.mergeConsecutiveRanges(imranges)
+            mxmranges = self.mergeConsecutiveRanges(xmranges)
+            return (mimranges, mxmranges)
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
