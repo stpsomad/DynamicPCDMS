@@ -21,12 +21,14 @@ class Loader(Oracle):
         Oracle.__init__(self, configuration)
 
     def createUser(self):
+        """Configures a new database user and grants the required priviledges."""
         connectionSuper = self.getConnection(True)
         cursorSuper = connectionSuper.cursor()
         ora.createUser(cursorSuper, self.user, self.password, self.tableSpace, self.tempTableSpace)
         connectionSuper.close()
     
     def createLASDirectory(self, lasDirVariableName, parentFolder):
+        """Creates a new Oracle directory by connecting to the superuser."""
         connectionSuper = self.getConnection(True)
         cursorSuper = connectionSuper.cursor()
         ora.createDirectory(cursorSuper, lasDirVariableName, parentFolder, self.userName)

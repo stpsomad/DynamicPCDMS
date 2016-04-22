@@ -203,6 +203,7 @@ WHERE owner='"""+findOwner(cursor,tableName)+"' AND table_name ='"+tableName.upp
     return cursor.fetchone()[0]
 
 def insertInto(cursor, tableName, data, explain = False, iid = ''):
+    """Generates the insert into statement by inserting the data into batches."""
     string = []
     if data is not None:
         for i in range(1, countColumns(cursor, tableName)+1):
@@ -235,13 +236,16 @@ def getSizeTable(cursor, tableName, super = True):
         size = 0
     return size
     
-def renameTable(cursor, old_name, new_name):
-    cursor.execute("""RENAME {0} to {1}""".format(old_name, new_name))
+def renameTable(cursor, oldName, newName):
+    """Rename the specified table"""
+    cursor.execute("""RENAME {0} to {1}""".format(oldName, newName))
     
-def renameConstraint(cursor, table, constraint_old, constraint_new):
+def renameConstraint(cursor, table, oldConstraintName, newConstraintName):
+    """Rename a constaint of the specified table"""
     cursor.execute("""ALTER TABLE {0}
-RENAME CONSTRAINT {1} TO {2}""".format(table, constraint_old, constraint_new))
+RENAME CONSTRAINT {1} TO {2}""".format(table, oldConstraintName, newConstraintName))
 
-def renameIndex(cursor, index_old, index_new):
-    cursor.execute("""ALTER INDEX {0} RENAME TO {1}""".format(index_old, index_new))
+def renameIndex(cursor, oldIndexName, newIndexName):
+    """Rename the specified index"""
+    cursor.execute("""ALTER INDEX {0} RENAME TO {1}""".format(oldIndexName, newIndexName))
     

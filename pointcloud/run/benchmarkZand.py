@@ -48,7 +48,7 @@ for integr in integrations:
             print tabulate(loadings, hloading, tablefmt="plain")
             
 #            if i == 1:
-#                os.system('python -m pointcloud.createQueryTable {0}'.format(configuration)) 
+#                os.system('python -m pointcloud.queryTab {0}'.format(configuration)) 
                 
             hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
         

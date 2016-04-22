@@ -30,8 +30,12 @@ class Querier(Oracle):
         self.queriesTable = config.get('Querier', 'table')
         self.tolerance = config.get('Querier', 'tolerance')
         self.method = config.get('Querier', 'method')
+
         if self.method == 'sql':
             self.maxRanges = config.getint('Querier', 'maxRanges')
+        else:
+            self.maxRanges = None
+        
         self.ids = config.get('Querier', 'id').replace(' ', '').split(',')
         self.numBits = config.getint('Querier', 'numBits')       
         
@@ -92,11 +96,16 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
         self.ozmin, self.ozmax  = 0, 0
         self.wkt = None
         self.start_date, self.end_date = None, None
-        self.qtype = 'space - time'
-        self.timeType = None
-        
+        self.qtype, self.timeType = None, None
+
     
     def prepareQuery(self, qid):
+        """The preparation of the query.
+        
+        This function reads a query stored in the query table, prepares the
+        parameters and creates the appropriate SQL statement for the first 
+        fetching of the data."""
+        
         connection = self.getConnection()
         cursor = connection.cursor()
 
@@ -105,9 +114,9 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
         elif self.granularity == 'year':
             extractTime = "EXTRACT(YEAR FROM t.START_DATE), EXTRACT(YEAR FROM t.END_DATE)"
         
-        cursor.execute("""SELECT t.TYPE, t.GEOMETRY.Get_WKT(), {0}, t.DATE_TYPE, t.Z_MIN, t.Z_MAX 
-FROM {1} t 
-WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid, self.dataset.lower()))
+        cursor.execute("SELECT t.TYPE, t.GEOMETRY.Get_WKT(), " + extractTime + "," + \
+"t.DATE_TYPE, t.Z_MIN, t.Z_MAX FROM " + self.queriesTable + """ t 
+WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
 
         self.qtype, self.wkt, self.start_date, self.end_date, self.timeType, self.ozmin, self.ozmax  = cursor.fetchall()[0]
 
@@ -146,7 +155,6 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
 
         # Preparing the different types of queries: Space and space - time
         continuous = True
-
         if self.wkt:
             if self.qtype.replace(' ', '').lower() != 'nn-search':
                 ordinates = list(loads(self.wkt).exterior.coords)
@@ -250,6 +258,7 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 else:           
                     geometry = Polygon4D(geom, zmin, zmax, times[0][0], times[0][1])
                     
+
         """The final lines have to do with the way of posing the query to the 
         database. Two options are possible:
         (a) sql: A SQL query is posed to the database. The number of ranges is
@@ -266,8 +275,9 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
             elif self.method == 'sql':
                 rangeTab, insert = None, 0
                 mortonWhere, ranges, morPrep = self.sql(geometry, coarser, continuous)
-            
-        if self.integration == 'deep' or (self.start_date is None and self.end_date is None and self.integration == 'loose'): # if deep the time is in the morton code
+        
+        # if deep the time is in the morton code
+        if self.integration == 'deep' or (self.start_date is None and self.end_date is None and self.integration == 'loose'): 
             timeWhere = ''
         elif self.integration == 'loose': 
             timeWhere = whereClause.addTimeCondition(times, 't.time', self.timeType)
@@ -275,10 +285,13 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
         return whereClause.getWhereStatement([timeWhere, mortonWhere]), ranges, morPrep, insert, rangeTab
 
         
-    def join(self, geometry, coarser, rangeTab, continuous = True):
+    def join(self, geometry, coarser, rangeTable, continuous = True):
+        """ This function creates and populates the table with the morton ranges
+        in order to later perform a join with the data table."""
+        
         connection = self.getConnection()
         cursor = connection.cursor()
-        cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[rangeTab,])
+        cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[rangeTable,])
         length = len(cursor.fetchall())
         connection.close()
         if length:
@@ -287,11 +300,11 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
             start1 = time.time()
             if isinstance(geometry, list):
                 data1 = self.structure.getMortonRanges(geometry[0], coarser, 
-                                                       continuous = False, 
-                                                       distinctIn = True)[0]
+                                                       continuous = False,
+                                                       maxRanges = self.maxRanges)[1]
                 data2 = self.structure.getMortonRanges(geometry[1], coarser, 
-                                                       continuous = False, 
-                                                       distinctIn = True)[0]
+                                                       continuous = False,
+                                                       maxRanges = self.maxRanges)[1]
                 morPrep = time.time() - start1
                 ranges = len(data1) + len(data2)
                 start2 = time.time()
@@ -301,17 +314,17 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 elif len(data1) or len(data2):
                     connection = self.getConnection()
                     cursor = connection.cursor()
-                    ora.createIOT(cursor, rangeTab, self.joinColumns, 'low', True)
+                    ora.createIOT(cursor, rangeTable, self.joinColumns, 'low', True)
                     if len(data1):
-                        sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data1) )
+                        sqlldrCommand = self.sqlldr(rangeTable, ['LOW', 'UPPER'], format_lst(data1))
                         os.system(sqlldrCommand)   
                     if len(data2):
-                        sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data2) )
+                        sqlldrCommand = self.sqlldr(rangeTable, ['LOW', 'UPPER'], format_lst(data2))
                         os.system(sqlldrCommand)
             else:
                 data = self.structure.getMortonRanges(geometry, coarser, 
                                                       continuous, 
-                                                      distinctIn = True)[0]
+                                                      distinctIn = True)[1]
                 morPrep = time.time() - start1
                 start2 = time.time()
                 if len(data) == 0:
@@ -320,8 +333,8 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 else:
                     connection = self.getConnection()
                     cursor = connection.cursor()
-                    ora.createIOT(cursor, rangeTab, self.joinColumns, 'low', True)
-                    sqlldrCommand = self.sqlldr(rangeTab, ['LOW', 'UPPER'], format_lst(data) )
+                    ora.createIOT(cursor, rangeTable, self.joinColumns, 'low', True)
+                    sqlldrCommand = self.sqlldr(rangeTable, ['LOW', 'UPPER'], format_lst(data))
                     os.system(sqlldrCommand)
                     ranges = len(data)
             insert = time.time() - start2
@@ -329,6 +342,11 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
         
     
     def sql(self, geometry, coarser, continuous = True):
+        """ This function generates the morton codes for the normal case of posing
+        a SQL command to the database.
+        
+        Returns the where clause with the morton ranges."""
+        
         start1 = time.time()
         if isinstance(geometry, list):
             (mimranges, mxmranges1, range1) = self.structure.getMortonRanges(geometry[0], 
@@ -363,7 +381,9 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
     def pointInPolygon(self, tempName, qid, check = False):
         """ The point in polygon function. This function is the validation step 
         of the querying process. It checks whether the points actually overlap 
-        with the specific area. Uses the PointInPolygon operator of Oracle"""
+        with the specific area. 
+        
+        Uses the PointInPolygon operator of Oracle"""
         
         if self.case == 1 or self.case == 2:
             zWhere = whereClause.getWhereStatement([whereClause.addZCondition([self.ozmin, self.ozmax], 'Z')])
@@ -380,18 +400,9 @@ WHERE id = {2} AND dataset = '{3}'""".format(extractTime, self.queriesTable, qid
                 query =  self.getCTASStatement(queryTab) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z',
 self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
-#"""CREATE TABLE """ + queryTab + """ AS (SELECT """ + self.getParallelString(6) + """ * 
-#FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(SELECT X, Y, Z, TO_DATE(TIME, 'yyyy/mm/dd') as TIME 
-#from """ + tempName + """), 
-#MDSYS.SDO_GEOMETRY('"""+ self.wkt + """', """ + self.srid + "), " + self.tolerance + """)) 
-#""" + zWhere +")"
             else:
                 query = self.getCTASStatement(queryTab) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere) + ')'
-
-#                query = """CREATE TABLE {0} AS (SELECT /*+ PARALLEL(6) */ * 
-#FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(SELECT X, Y, Z, TIME from {1}), 
-#MDSYS.SDO_GEOMETRY('{2}', {3}), {4})) {5})""".format(queryTab, tempName, self.wkt, self.srid, self.tolerance, zWhere)
 
         connection = self.getConnection()
         cursor = connection.cursor()
@@ -410,28 +421,27 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
         connection = self.getConnection()
         cursor = connection.cursor()
         lst = []
-        
-        #=====================================================================#
-        # Preparation                                                         #
-        #=====================================================================#
+
+        #======================================================================
+        #       Preparation
+        #======================================================================
         whereStatement, ranges, morPrep, insert, rangeTab  = self.prepareQuery(qid)
         lst.append(round(morPrep, 6)) # preparation
         lst.append(round(insert, 6)) # insert ranges into table
         lst.append(ranges) #number of ranges
-        
-        #=====================================================================#
-        # Approximation of query region                                       #
-        #=====================================================================#
+
+        #======================================================================
+        #       Approximation of query region
+        #======================================================================
 
         if whereStatement is not '':
             if rangeTab is not None:
-                query = """select {0} {1} 
-from {2} t, {3} r 
-{4}""".format(self.getHintStatement(['USE_NL (t r)']), 
-', '.join(['t.'+i for i in self.columnNames]), self.iotTableName, rangeTab, whereStatement)
+                query = "select " + self.getHintStatement(['USE_NL (t r)']) + \
+" " + ', '.join(['t.'+i for i in self.columnNames]) + " from " + self.iotTableName + \
+" t, " + rangeTab + " r " + whereStatement
+
             else:
-                query = """select {0} 
-from {1} t {2}""".format(', '.join(self.columnNames), self.iotTableName, whereStatement)
+                query = "select " + ', '.join(self.columnNames) + " from " + self.iotTableName + " t " + whereStatement
 
             start1 = time.time()
             ora.mogrifyExecute(cursor, query)
@@ -456,10 +466,11 @@ from {1} t {2}""".format(', '.join(self.columnNames), self.iotTableName, whereSt
                 lst.append(res) #approximate points
             else:
                 ptsInTemp = 0
-            
-        #=====================================================================#
-        # Filtering of query region                                           #
-        #=====================================================================#
+                
+            #==================================================================
+            #         Filtering of query region
+            #==================================================================
+
             if (self.qtype.lower() == 'time' and self.integration == 'loose') or res == []:
                 # no data returned or it is a time query in the loose integration
                 lst.append(ptsInTemp) #approximate points
@@ -628,10 +639,16 @@ def format_lst(lst):
                  
                  
 if __name__ == "__main__":
-    configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/coastline/dxyzt_10000_part1.ini'
-#    os.system('python -m pointcloud.createQueryTable ' + configuration)
+    dataset = 'zandmotor'
+    case = 'lxyt_1_part1'    
+    
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
-    queries = []
+    queries = []    
+    
+    path = os.getcwd()
+    configuration = path + '/ini/' + dataset + '/' + case + '.ini'
+    os.system('python -m pointcloud.queryTab ' + configuration)
+
     querier = Querier(configuration)
     connection = querier.getConnection()
     cursor = connection.cursor()

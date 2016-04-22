@@ -109,10 +109,10 @@ def parseTimeFromFilename(name, dataset):
     Zandmotor are in the format yyyy_mm_dd
     Coastline are in the format yyyy_[other]"""
     if dataset.lower() in ['zandmotor']:
-        date = map(int, name[name.rfind('\\')+1:-4].split('_'))
+        date = map(int, name[name.rfind('/')+1:-4].split('_'))
         return reader.daySinceEpoch(date[0], date[1], date[2])
     elif dataset.lower() in ['coastline']:
-        return int(name[name.rfind('\\')+1:name.rfind('\\')+5])
+        return int(name[name.rfind('/')+1:name.rfind('/')+5])
    
 def updateMetaTable(connection, cursor, metaTable, srid, minx, miny, minz, maxx, maxy, maxz, t, scalex, scaley, scalez, offx, offy, offz, typel):    
     if typel == False or typel == 'False':

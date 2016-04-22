@@ -10,7 +10,9 @@ from pointcloud.AbstractBulkLoader import BulkLoader
 import time
 from tabulate import tabulate
 #import pointcloud.oracleTools as ora
+import os
 
+path = os.getcwd()
 dataset = 'zandmotor'
 benchmark = ['mini', 'medium', 'full']  
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
@@ -24,7 +26,7 @@ for integr in integrations:
         loadings = []
         queries = []
         for i in range(1,2):
-            configuration = 'D:/Dropbox/Thesis/Thesis/pointcloud/ini/{0}/{1}_{2}_part{3}.ini'.format(dataset, integr, scaling, i)
+            configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_part' + str(i) + '.ini'
 
             bulk = BulkLoader(configuration)
             loading = []
