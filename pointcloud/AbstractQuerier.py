@@ -441,7 +441,8 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
 " t, " + rangeTab + " r " + whereStatement
 
             else:
-                query = "select " + ', '.join(self.columnNames) + " from " + self.iotTableName + " t " + whereStatement
+                query = "select " + ', '.join(self.columnNames) + " from " + \
+                self.iotTableName + " t " + whereStatement
 
             start1 = time.time()
             ora.mogrifyExecute(cursor, query)
