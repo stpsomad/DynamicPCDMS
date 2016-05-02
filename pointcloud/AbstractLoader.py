@@ -9,7 +9,6 @@ Author: Oscar Martinez Rubi
 Apache License
 Version 2.0, January 2004
 """
-
 import pointcloud.general as general
 import pointcloud.oracleTools as ora
 import os
@@ -24,7 +23,7 @@ class Loader(Oracle):
         """Configures a new database user and grants the required priviledges."""
         connectionSuper = self.getConnection(True)
         cursorSuper = connectionSuper.cursor()
-        ora.createUser(cursorSuper, self.user, self.password, self.tableSpace, self.tempTableSpace)
+        ora.createUser(cursorSuper, self.user, self.password, self.tableSpaceIOT, self.tempTableSpace)
         connectionSuper.close()
     
     def createLASDirectory(self, lasDirVariableName, parentFolder):
@@ -47,7 +46,7 @@ class Loader(Oracle):
         return heapCols
         
     def getTableSpaceString(self, tableSpace):
-        if tableSpace != None and tableSpace != '':
+        if tableSpace is not None and tableSpace != '':
             return " TABLESPACE " + tableSpace + " "
         else: 
             return ""
@@ -157,7 +156,7 @@ END;""")
     def extLoaderLoading(self, connection):
         cursor = connection.cursor()
         if self.init:
-            self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpace, self.numProcesses)
+            self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
         else:
             ora.appendData(connection, cursor, self.iotTableName, self.tableName)
         ora.dropTable(cursor, self.tableName, check = False)
@@ -165,7 +164,7 @@ END;""")
     def sqlldrPrep(self, connection, configuration):
         cursor = connection.cursor()
         
-        self.createFlatTable(cursor, self.tableName, self.tableSpace)
+        self.createFlatTable(cursor, self.tableName, self.tableSpaceHeap)
         if self.init:
             ora.createMetaTable(cursor, self.metaTable, True)
 
@@ -176,7 +175,7 @@ END;""")
     def sqlldrLoading(self, connection):
         cursor = connection.cursor()
         if self.init:
-            self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpace, self.numProcesses)
+            self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
         else:
             if self.update == 'dump':
                 ora.appendData(connection, cursor, self.iotTableName, self.tableName)
@@ -190,7 +189,7 @@ END;""")
         cursor = connection.cursor()
         ora.appendData(connection, cursor, self.tableName, self.iotTableName)
         ora.dropTable(cursor, self.iotTableName, check = False)
-        self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpace, self.numProcesses)
+        self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
 
     def sizeIOT(self):
         connection = self.getConnection()

@@ -15,8 +15,13 @@ from cx_Oracle import connect
 import pointcloud.general as general
 
 class Oracle:
+    """This class contains common variables that are used both for the Loading
+    anf Querying part."""
+    
     def __init__(self, configurationFile):
-        """Set the database parameters"""        
+        """
+        Set the database parameters.
+        """        
         config = ConfigParser()
         config.read(configurationFile)
         self.configFile = configurationFile
@@ -53,7 +58,8 @@ class Oracle:
         self.database = config.get(self.db, 'Name')
         self.superUserName = config.get(self.db,'SuperUser') 
         self.superPassword = config.get(self.db,'SuperPass')
-        self.tableSpace = config.get('database','tableSpace')
+        self.tableSpaceHeap = config.get('database','tableSpaceHeap')
+        self.tableSpaceIOT = config.get('database','tableSpaceIOT')
         self.tempTableSpace = config.get('database','tempTableSpace')
         self.numProcesses = config.getint('database','numProcesses')
         

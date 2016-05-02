@@ -15,6 +15,11 @@ import pointcloud.reader as reader
 
 
 def getWhereStatement(conditions, operator = ' AND '):
+    """
+    Composes the WHERE clause according to the conditions specified and the
+    operator given.    
+    """
+    
     if type(conditions) not in (list, tuple):
         conditions = [conditions,]
     cs = []
@@ -26,12 +31,19 @@ def getWhereStatement(conditions, operator = ' AND '):
     return ''
 
 def addZCondition(zRange, ZColumn):
+    """
+    Composes the predicate in the z dimension
+    """    
+    
     if zRange[0] == zRange[1]:
         return ''
     else:
         return "(" + ZColumn + ' BETWEEN ' + str(zRange[0]) + ' AND ' +  str(zRange[1]) + ')'
 
 def addMortonCondition(mortonRanges, mortonColumnName):
+    """
+    Composes the predicate with the morton ranges.
+    """
     elements = []
     for mortonRange in mortonRanges:
         elements.append('(' + mortonColumnName + ' between ' + str(mortonRange[0]) + ' and ' + str(mortonRange[1]) + ')')
@@ -42,6 +54,10 @@ def addMortonCondition(mortonRanges, mortonColumnName):
     return None
     
 def getTime(granularity, start_date, end_date):
+    """
+    Formats time according to the granularity and the type of time query.
+    """
+    
     if start_date == None and end_date == None:
         return [[]]
     elif end_date == None and granularity == 'day':
@@ -52,6 +68,10 @@ def getTime(granularity, start_date, end_date):
         return [["TO_DATE('{0}', 'YYYY/MM/DD')".format(reader.formatTime(start_date)), "TO_DATE('{0}', 'YYYY/MM/DD')".format(reader.formatTime(end_date))]]
         
 def addTimeCondition(timeRanges, timeColumn, ttype = 'continuous'):
+    """
+    Composes the predicate of the time dimension    
+    """
+    
     if ttype == None:
         return ''
     if ttype.lower() == 'continuous':

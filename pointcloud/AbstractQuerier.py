@@ -30,6 +30,7 @@ class Querier(Oracle):
         self.queriesTable = config.get('Querier', 'table')
         self.tolerance = config.get('Querier', 'tolerance')
         self.method = config.get('Querier', 'method')
+        self.numProcesses = config.getint('Querier', 'numProcesses')
 
         if self.method == 'sql':
             self.maxRanges = config.getint('Querier', 'maxRanges')
@@ -431,7 +432,7 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
         lst.append(ranges) #number of ranges
 
         #======================================================================
-        #       Approximation of query region
+        #       First approximation of query region
         #======================================================================
 
         if whereStatement is not '':
@@ -469,7 +470,7 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
                 ptsInTemp = 0
                 
             #==================================================================
-            #         Filtering of query region
+            #     Secondary filtering of query region
             #==================================================================
 
             if (self.qtype.lower() == 'time' and self.integration == 'loose') or res == []:
@@ -569,7 +570,7 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
         if len(data) > 0:
             connection = self.getConnection()
             cursor = connection.cursor()
-            ora.createTableQuery(cursor, tableName, columns, check)
+            ora.createTable(cursor, tableName, columns, check)
             ora.insertInto(cursor, tableName, data)
             connection.commit()
             return len(data)

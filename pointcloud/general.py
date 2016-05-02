@@ -2,20 +2,26 @@
 """
 Created on Tue Dec 22 2015
 
-@author: psomadak
-"""
+@author: Stella Psomadaki
 
+This module contains general purpose functions and variables used in the majority
+of the scripts
+"""
 import os
 
-"""Contains general purpose functions and variables used in the majority of the
-scripts"""
 
 #default file formats used
 PC_FILE_FORMATS = ['las','laz','LAS', 'LAZ'] 
+
+#offsets
 OFFSET_ZANDMOTOR = 69000, 440000, -100, 0
 OFFSET_COASTLINE = 4000, 374000, -100, 0
+
+#scales
 SCALE_ZANDMOTOR = 0.001, 0.001, 0.001, 1
 SCALE_COASTLINE = 0.01, 0.01, 0.01, 1
+
+#Dutch SRID
 SRID = 28992
 
 DM_SQLLDR = {
@@ -54,9 +60,10 @@ DIRS = {
     'part1': '/pak2/usrdata/stella/Zandmotor_bench/part1/',
     'part2': '/pak2/usrdata/stella/Zandmotor_bench/part2/',
     'part3': '/pak2/usrdata/stella/Zandmotor_bench/part3/',
-    'cmini': '/pak2/usrdata/stella/Coastline_bench/mini/',
-    'cmedium': '/pak2/usrdata/stella/Coastline_bench/medium/',
-    'clarge': '/pak2/usrdata/stella/Coastline_bench/large/'}
+    'c2012': '/pak2/usrdata/stella/Coastline_bench/medium/2012/',
+    'c2013': '/pak2/usrdata/stella/Coastline_bench/medium/2013/',
+    'c2014': '/pak2/usrdata/stella/Coastline_bench/medium/2014/',
+    'c2015': '/pak2/usrdata/stella/Coastline_bench/medium/2015/'}
     
 def getFiles(inputElement, extensions = PC_FILE_FORMATS, recursive = False):
     """ Get the list of files with certain extensions contained in the folder 
