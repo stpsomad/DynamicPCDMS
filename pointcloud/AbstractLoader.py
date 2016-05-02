@@ -12,7 +12,7 @@ Version 2.0, January 2004
 import pointcloud.general as general
 import pointcloud.oracleTools as ora
 import os
-import numpy as np
+#import numpy as np
 from CommonOracle import Oracle
 
 class Loader(Oracle):
@@ -20,14 +20,18 @@ class Loader(Oracle):
         Oracle.__init__(self, configuration)
 
     def createUser(self):
-        """Configures a new database user and grants the required priviledges."""
+        """
+        Configures a new database user and grants the required priviledges.
+        """
         connectionSuper = self.getConnection(True)
         cursorSuper = connectionSuper.cursor()
         ora.createUser(cursorSuper, self.user, self.password, self.tableSpaceIOT, self.tempTableSpace)
         connectionSuper.close()
     
     def createLASDirectory(self, lasDirVariableName, parentFolder):
-        """Creates a new Oracle directory by connecting to the superuser."""
+        """
+        Creates a new Oracle directory by connecting to the superuser.
+        """
         connectionSuper = self.getConnection(True)
         cursorSuper = connectionSuper.cursor()
         ora.createDirectory(cursorSuper, lasDirVariableName, parentFolder, self.userName)
@@ -52,6 +56,10 @@ class Loader(Oracle):
             return ""
     
     def sqlldr(self, tableName):
+        """
+        Generates the control file for the sqlldr and composes the sqlloader
+        command.
+        """
         commonFile = 'loader'
         controlFile = commonFile + '.ctl'
         badFile = commonFile + '.bad'
@@ -77,13 +85,18 @@ fields terminated by ','
         return sqlLoaderCommand
         
     def createFlatTable(self, cursor, tableName, tableSpace):
-        """ Creates a empty flat table"""
+        """
+        Creates a empty flat table
+        """
         ora.dropTable(cursor, tableName, True)
         
         ora.mogrifyExecute(cursor,"""
 CREATE TABLE """ + tableName + """ (""" + (',\n'.join(self.getHeapColumns())) + """) """ + self.getTableSpaceString(tableSpace) + """ pctfree 0 nologging""")
 
     def createExternalTable(self, cursor, txtFiles, tableName, txtDirVariableName, numProcesses):
+        """
+        Creates an external table by accecssing the files in the specified directory.        
+        """
         ora.dropTable(cursor, tableName, True)
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + tableName + """ (""" + (',\n'.join(self.getHeapColumns())) + """)
@@ -99,7 +112,9 @@ LOCATION ('""" + txtFiles + """')
 """ + self.getParallelString(numProcesses) + """ REJECT LIMIT 0""")     
         
     def createIOTTable(self, cursor, iotTableName, tableName, tableSpace, numProcesses):
-        """ Create Index-Organized-Table and populate it from tableName Table"""
+        """
+        Creates an Index-Organized-Table and populates it from the heap table data.
+        """
         ora.dropTable(cursor, iotTableName, True)
         
         cls = [', '.join(i[0] for i in self.columns)]
@@ -115,6 +130,10 @@ AS
     SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName)
     
     def addIOTUnionAll(self, cursor):
+        """
+        Inserting additional data to the table by UNIONing the current IOT with 
+        the heap table.
+        """
         temp_iot = self.iotTableName + '_2'
         ora.renameTable(cursor, self.iotTableName, temp_iot)
         ora.renameConstraint(cursor, temp_iot, self.iotTableName + '_PK', temp_iot + '_PK')
@@ -136,6 +155,9 @@ SELECT """  + (', '.join(cls)) + ' FROM ' + temp_iot)
         ora.dropTable(cursor, temp_iot)
 
     def computeStatistics(self, cursor):
+        """
+        Gather optimiser statistics.
+        """
         ora.mogrifyExecute(cursor, "ANALYZE TABLE " + self.iotTableName + "  compute system statistics for table")
         ora.mogrifyExecute(cursor,"""
 BEGIN
@@ -144,6 +166,9 @@ END;""")
 
 
     def extLoaderPrep(self, connection, configuration):
+        """
+        Prepare the data for the use of external tables.
+        """
         cursor = connection.cursor()
 
         if self.init:
@@ -154,6 +179,9 @@ END;""")
         self.createExternalTable(cursor, '*.txt', self.tableName, self.ORCLdirectory, self.numProcesses)
     
     def extLoaderLoading(self, connection):
+        """
+        Load the data using External Tables.
+        """
         cursor = connection.cursor()
         if self.init:
             self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
@@ -162,6 +190,9 @@ END;""")
         ora.dropTable(cursor, self.tableName, check = False)
     
     def sqlldrPrep(self, connection, configuration):
+        """
+        Initialise the sqlldr loading procedure. Load data into the heap table.
+        """
         cursor = connection.cursor()
         
         self.createFlatTable(cursor, self.tableName, self.tableSpaceHeap)
@@ -173,6 +204,9 @@ END;""")
         os.system(command)
         
     def sqlldrLoading(self, connection):
+        """
+        Create the IOT or update according to the specified update method (dump, 
+        union, resort)"""
         cursor = connection.cursor()
         if self.init:
             self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
@@ -186,12 +220,18 @@ END;""")
         ora.dropTable(cursor, self.tableName)
            
     def rebuildIOT(self, connection):
+        """
+        Rebuilt the index organised table by resorting the new and the old data.
+        """
         cursor = connection.cursor()
         ora.appendData(connection, cursor, self.tableName, self.iotTableName)
         ora.dropTable(cursor, self.iotTableName, check = False)
         self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
 
     def sizeIOT(self):
+        """
+        Returns the size of table in MB and the number of rows present in the database.
+        """
         connection = self.getConnection()
         cursor = connection.cursor()
         size_total = ora.getSizeTable(cursor, self.iotTableName)    
@@ -199,5 +239,5 @@ END;""")
         connection.close()
         return size_total, number_total
         
-    def round2resolution(array, predicate):
-        return np.round(array - np.mod(predicate + array, predicate), 0)
+#    def round2resolution(array, predicate):
+#        return np.round(array - np.mod(predicate + array, predicate), 0)

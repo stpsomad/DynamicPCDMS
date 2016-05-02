@@ -21,10 +21,13 @@ class QueryTable(Oracle):
         self.queriesTable = config.get('Querier', 'table')
         
     def createQueriesTable(self):
-        """ Creates the query table where the actual queries posed to the 
+        """
+        Creates the query table where the actual queries posed to the 
         database are stored. Each query has and id, a dataset it belongs to,
         a type, geometry, the date ranges, the type of date querying and the
-        range of heights."""
+        range of heights.
+        """
+        
         connection = self.getConnection(False)
         cursor = connection.cursor()
         ora.mogrifyExecute(cursor, """CREATE TABLE {0} (

@@ -26,7 +26,6 @@ class Oracle:
         config.read(configurationFile)
         self.configFile = configurationFile
         
-        #Setting the benchmark options
         self.format = config.get('benchmark-options', 'format')
         self.type = config.get('benchmark-options', 'integration')
         self.clustering = config.get('benchmark-options', 'clustering')
@@ -92,13 +91,17 @@ class Oracle:
             self.metaTable = 'meta' + self.iotTableName
             
     def eqColumns(self):
-        #Performs the following operation MORTON, TIME, Z -> ['m', 't', 'z']
+        """
+        Performs the following operation MORTON, TIME, Z -> ['m', 't', 'z']
+        """
         cols = []
         for i in self.columns:
             cols.append(general.EQ_DIM[i[0]])
         return cols
     
     def getDBColumn(self, index, includeType = False):
+        """
+        Get the column name used by the heap table or external table."""
         column = self.cols[index]
         if column not in general.DM_FLAT:
             raise Exception('Wrong column!' + column)
@@ -109,27 +112,40 @@ class Oracle:
             return (columnName,)
     
     def getConnectString(self, superUser = False):
+        """
+        Gets a connection string to establish a database connection.
+        """
         if not superUser:
-            """ Gets a connection string to be used in SQLPlus or CxOracle"""
             return self.user + "/" + self.password + "@//" + self.host + ":" + self.port + "/" + self.database
         else:
             return self.superUserName + "/" + self.superPassword + "@//" + self.host + ":" + self.port + "/" + self.database
         
     def getConnection(self, superUser = False):
-        """Establishes connection to an Oracle database"""
+        """
+        Establishes connection to an Oracle database.
+        """
         try:
             return connect(self.getConnectString(superUser))
         except:
             print "Connection could not be established"
             
     def getParallelString(self, numProcesses):
+        """
+        Generates the hint for parallel execution.
+        """
         parallelString = ''
         if numProcesses > 1:
             parallelString = ' PARALLEL ' + str(numProcesses) + ' '
         return parallelString
         
     def getCTASStatement(self, tableName):
+        """
+        Generates a CREATE TABLE ... AS SELECT ... statement.
+        """
         return "CREATE TABLE " + tableName + " AS "
         
     def getSelectStatement(self, table, hints, columns = '*'):
+        """
+        Generates a SELECT ... statement.
+        """
         return "SELECT " + hints + ' ' + columns + " FROM " + table
