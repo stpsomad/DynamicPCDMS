@@ -50,6 +50,9 @@ class Loader(Oracle):
         return heapCols
         
     def getTableSpaceString(self, tableSpace):
+        """
+        Generates the TABLESPACE predicate of the SQL query.
+        """
         if tableSpace is not None and tableSpace != '':
             return " TABLESPACE " + tableSpace + " "
         else: 

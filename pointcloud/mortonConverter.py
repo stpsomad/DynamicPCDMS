@@ -42,6 +42,7 @@ def converter(ini_file):
     files = getFiles(initialise.directory, ['laz'], True)
     files.sort()
     cursor = connection.cursor()
+    
     if initialise.dataset.lower() == 'zandmotor':
         offx, offy, offz, offt = OFFSET_ZANDMOTOR
         scalex, scaley, scalez, scalet = SCALE_ZANDMOTOR

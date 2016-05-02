@@ -380,11 +380,13 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
 
 
     def pointInPolygon(self, tempName, qid, check = False):
-        """ The point in polygon function. This function is the validation step 
+        """
+        The point in polygon function. This function is the validation step 
         of the querying process. It checks whether the points actually overlap 
         with the specific area. 
         
-        Uses the PointInPolygon operator of Oracle"""
+        Uses the PointInPolygon operator of Oracle.
+        """
         
         if self.case == 1 or self.case == 2:
             zWhere = whereClause.getWhereStatement([whereClause.addZCondition([self.ozmin, self.ozmax], 'Z')])
@@ -419,6 +421,10 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
         
         
     def query(self, qid):
+        """
+        This function is responsible for glueing together all the steps needed to
+        pose a query to the spatio-temporal point cloud database.
+        """
         connection = self.getConnection()
         cursor = connection.cursor()
         lst = []
@@ -517,6 +523,10 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
     
             
     def decodeSpaceTime(self, result):
+        """
+        Decode the morton codes according to the specified integration of space 
+        and time and the granularity of time.
+        """
         if self.case ==  1:
             if self.granularity == 'day':
                 return map(lambda x: [reader.formatTime(reader.inverseDaySinceEpoch(int(x[0]/self.scale))),
@@ -557,6 +567,9 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
                                     reader.morton2coordsZ4D(x[0], self.offz, self.scalez, self.roundNum)], result)
     
     def list2ScaleOffset(self, lst):
+        """
+        Offsets and scales the provided list.
+        """
         t = []
         if len(lst[0]) == 2:
             for i in lst:
@@ -567,6 +580,9 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
         return t
 
     def storeQuery(self, tableName, columns, data, check = False):
+        """
+        Store the first query approximation into a temporary table.
+        """
         if len(data) > 0:
             connection = self.getConnection()
             cursor = connection.cursor()
@@ -579,6 +595,10 @@ FROM {1} {2}""".format(queryTab, qTable, whereValue)
             return []
             
     def sqlldr(self, tableName, cols, data):
+        """
+        Generates the control file for the sqlldr and composes the sqlloader
+        command.
+        """
         commonFile = 'ranges'
         controlFile = commonFile + '.ctl'
         badFile = commonFile + '.bad'
@@ -603,11 +623,17 @@ fields terminated by ','
         return sqlLoaderCommand
         
     def getHintStatement(self, hints):
+        """
+        Composes the SQL statement for using optimizer hints.
+        """
         if len(hints):
             return '/*+ ' + ' '.join(hints) + ' */'
         return ''
         
     def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition, numProcesses = 1):
+        """
+        Composes the Point In Polygon SQL statement.
+        """
         return 'SELECT ' + self.getSelectColumns('*') + """ 
         FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(
 """ + self.getSelectStatement(approxTable, self.getHintStatement([self.getParallelString(numProcesses)]), self.getSelectColumns(columnsPIP)) + """), 
@@ -615,11 +641,17 @@ MDSYS.SDO_GEOMETRY('""" + self.wkt + """', """ + str(self.srid) + """), """ + st
 """ + condition
      
     def getAlias(self, column, alias = ''):
+        """
+        Composes an alias for the column specified. 
+        """
         if alias:
             return column + ' AS ' + alias
         return column
         
     def getSelectColumns(self, columns):
+        """
+        Prepare the columns to be selected by the SELECT statement.
+        """
         if columns == '*':
             return columns
         else:
