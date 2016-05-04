@@ -57,9 +57,12 @@ class Oracle:
         self.database = config.get(self.db, 'Name')
         self.superUserName = config.get(self.db,'SuperUser') 
         self.superPassword = config.get(self.db,'SuperPass')
+        
+        # Setting the tablespaces
         self.tableSpaceHeap = config.get('database','tableSpaceHeap')
         self.tableSpaceIOT = config.get('database','tableSpaceIOT')
         self.tempTableSpace = config.get('database','tempTableSpace')
+        # Number of processes for loading
         self.numProcesses = config.getint('database','numProcesses')
         
         if self.integration.lower() == "loose":
@@ -137,14 +140,25 @@ class Oracle:
         if numProcesses > 1:
             parallelString = ' PARALLEL ' + str(numProcesses) + ' '
         return parallelString
+    
+    def getTableSpaceString(self, tableSpace):
+        """
+        Generates the TABLESPACE predicate of the SQL query.
+        """
+        if tableSpace is not None and tableSpace != '':
+            return " TABLESPACE " + tableSpace + " "
+        else: 
+            return ""
         
-    def getCTASStatement(self, tableName):
+    def getCTASStatement(self, tableName, tableSpace = ''):
         """
         Generates a CREATE TABLE ... AS SELECT ... statement.
         """
-        return "CREATE TABLE " + tableName + " AS "
+        return "CREATE TABLE " + tableName + """
+""" + tableSpace + """ 
+AS """
         
-    def getSelectStatement(self, table, hints, columns = '*'):
+    def getSelectStatement(self, table, columns = '*', hints =''):
         """
         Generates a SELECT ... statement.
         """

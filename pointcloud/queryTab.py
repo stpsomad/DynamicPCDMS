@@ -55,7 +55,7 @@ def main(config):
     querier = QueryTable(config)
     querier.createQueriesTable()
     cwd = os.getcwd()
-    qfile = open(cwd + '\pointcloud\queries.txt', 'r')
+    qfile = open(cwd + '/pointcloud/queries.txt', 'r')
     for i in qfile:
         querier.getInsertInto(literal_eval(i))
     qfile.close()

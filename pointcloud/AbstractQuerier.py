@@ -31,6 +31,7 @@ class Querier(Oracle):
         self.tolerance = config.get('Querier', 'tolerance')
         self.method = config.get('Querier', 'method')
         self.numProcesses = config.getint('Querier', 'numProcesses')
+        self.tableSpace = config.get('Querier', 'tableSpace')
 
         if self.method == 'sql':
             self.maxRanges = config.getint('Querier', 'maxRanges')
@@ -400,13 +401,15 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         
         if self.qtype.replace(' ', '').lower() != 'nn-search':
             if self.granularity == 'day':
-                query =  self.getCTASStatement(queryTab) + \
+                query =  self.getCTASStatement(queryTab, self.getTableSpaceString(self.tableSpace)) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z',
-self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
+self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere, self.numProcesses) + ')'
             else:
-                query = self.getCTASStatement(queryTab) + \
-'(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere) + ')'
-
+                query = self.getCTASStatement(queryTab, self.getTableSpaceString(self.tableSpace)) + \
+'(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere, self.numProcesses) + ')'
+        ######
+        print query
+        ######
         connection = self.getConnection()
         cursor = connection.cursor()
         ora.dropTable(cursor, queryTab, check)
@@ -443,13 +446,15 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
 
         if whereStatement is not '':
             if rangeTab is not None:
-                query = "select " + self.getHintStatement(['USE_NL (t r)']) + \
-" " + ', '.join(['t.'+i for i in self.columnNames]) + " from " + self.iotTableName + \
-" t, " + rangeTab + " r " + whereStatement
+                query = "select " + self.getHintStatement('USE_NL (t r)') + \
+" " + ', '.join(['t.'+i for i in self.columnNames]) + """
+ from """ + self.iotTableName + " t, " + rangeTab + """ r 
+ """ + whereStatement
 
             else:
-                query = "select " + ', '.join(self.columnNames) + " from " + \
-                self.iotTableName + " t " + whereStatement
+                query = "select "+ self.getHintStatement(self.getParallelString(self.numProcesses)) + ', '.join(self.columnNames) + """ 
+from """ + self.iotTableName + """ t 
+""" + whereStatement
 
             start1 = time.time()
             ora.mogrifyExecute(cursor, query)
@@ -494,13 +499,25 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
                     
                     
                     if self.granularity == 'day':
-                        query = """CREATE TABLE {0} AS SELECT * 
-FROM (SELECT X, Y, Z, TO_DATE(TIME, 'yyyy/mm/dd') as TIME FROM {1}) 
-{2}""".format(queryTab, qTable, whereValue)
+                        query = "CREATE TABLE " + queryTab + """
+""" + self.getTableSpaceString(self.tableSpace) + """
+AS SELECT * 
+FROM (
+    SELECT """ + self.getHintStatement(self.getParallelString(self.numProcesses)) + \
+    """ X, Y, Z, TO_DATE(TIME, 'yyyy/mm/dd') as TIME 
+    FROM """ + qTable +"""
+    ) 
+""" + whereValue
                     else:
-                        query = """CREATE TABLE {0} AS SELECT X, Y, Z, TIME 
-FROM {1} {2}""".format(queryTab, qTable, whereValue)
-                    
+                        query = "CREATE TABLE " + queryTab + """
+""" + self.getTableSpaceString(self.tableSpace) + """ 
+    AS SELECT """ + self.getHintStatement(self.getParallelString(self.numProcesses)) + \
+    """ X, Y, Z, TIME 
+    FROM """+ qTable + """" 
+    """ + whereValue
+                    #####
+                    print query
+                    #####
                     start1 = time.time()
                     cursor.execute(query)
                     end = round(time.time() - start1, 2)
@@ -619,6 +636,7 @@ fields terminated by ','
         ctfile.write('\nBEGINDATA\n')
         ctfile.write(data)
         ctfile.close()
+#        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " parallel=true direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
         return sqlLoaderCommand
         
@@ -627,16 +645,16 @@ fields terminated by ','
         Composes the SQL statement for using optimizer hints.
         """
         if len(hints):
-            return '/*+ ' + ' '.join(hints) + ' */'
+            return ' /*+ ' + ' '.join(hints) + ' */ '
         return ''
         
     def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition, numProcesses = 1):
         """
         Composes the Point In Polygon SQL statement.
         """
-        return 'SELECT ' + self.getSelectColumns('*') + """ 
-        FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(
-""" + self.getSelectStatement(approxTable, self.getHintStatement([self.getParallelString(numProcesses)]), self.getSelectColumns(columnsPIP)) + """), 
+        return 'SELECT ' + self.getHintStatement(self.getParallelString(numProcesses)) + self.getSelectColumns('*') + """ 
+FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(
+""" + self.getSelectStatement(approxTable, self.getSelectColumns(columnsPIP)) + """), 
 MDSYS.SDO_GEOMETRY('""" + self.wkt + """', """ + str(self.srid) + """), """ + str(self.tolerance) +"""))
 """ + condition
      

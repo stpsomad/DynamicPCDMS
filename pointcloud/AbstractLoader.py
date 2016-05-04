@@ -48,15 +48,6 @@ class Loader(Oracle):
         for i in range(len(self.cols)):
             heapCols.append(self.getDBColumn(i)[0])
         return heapCols
-        
-    def getTableSpaceString(self, tableSpace):
-        """
-        Generates the TABLESPACE predicate of the SQL query.
-        """
-        if tableSpace is not None and tableSpace != '':
-            return " TABLESPACE " + tableSpace + " "
-        else: 
-            return ""
     
     def sqlldr(self, tableName):
         """
@@ -92,9 +83,18 @@ fields terminated by ','
         Creates a empty flat table
         """
         ora.dropTable(cursor, tableName, True)
-        
+        ######
+        print """
+CREATE TABLE """ + tableName + """ (
+""" + (',\n'.join(self.getHeapColumns())) + """) 
+""" + self.getTableSpaceString(tableSpace) + """ 
+pctfree 0 nologging"""
+        #####
         ora.mogrifyExecute(cursor,"""
-CREATE TABLE """ + tableName + """ (""" + (',\n'.join(self.getHeapColumns())) + """) """ + self.getTableSpaceString(tableSpace) + """ pctfree 0 nologging""")
+CREATE TABLE """ + tableName + """ (
+""" + (',\n'.join(self.getHeapColumns())) + """) 
+""" + self.getTableSpaceString(tableSpace) + """ 
+pctfree 0 nologging""")
 
     def createExternalTable(self, cursor, txtFiles, tableName, txtDirVariableName, numProcesses):
         """
@@ -121,12 +121,24 @@ LOCATION ('""" + txtFiles + """')
         ora.dropTable(cursor, iotTableName, True)
         
         cls = [', '.join(i[0] for i in self.columns)]
-        
+        #####
+        print """
+CREATE TABLE """ + iotTableName + """
+(""" + (', '.join(cls)) + """, 
+    CONSTRAINT """ + iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
+    ORGANIZATION INDEX
+    """ + self.getTableSpaceString(tableSpace) + """
+    PCTFREE 0 NOLOGGING
+""" + self.getParallelString(numProcesses) + """
+AS
+    SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName
+        #####
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + iotTableName + """
 (""" + (', '.join(cls)) + """, 
     CONSTRAINT """ + iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
-    ORGANIZATION INDEX""" + self.getTableSpaceString(tableSpace) + """
+    ORGANIZATION INDEX
+    """ + self.getTableSpaceString(tableSpace) + """
     PCTFREE 0 NOLOGGING
 """ + self.getParallelString(numProcesses) + """
 AS
@@ -144,11 +156,24 @@ AS
         
         cls = [', '.join(i[0] for i in self.columns)]
         
+        ######
+        print """
+CREATE TABLE """ + self.iotTableName + """
+(""" + (', '.join(cls)) + """, 
+    CONSTRAINT """ + self.iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
+    ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpaceIOT) + """
+    PCTFREE 0 NOLOGGING
+""" + self.getParallelString(self.numProcesses) + """AS
+SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
+UNION ALL
+SELECT """  + (', '.join(cls)) + ' FROM ' + temp_iot
+        ######
+        
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + self.iotTableName + """
 (""" + (', '.join(cls)) + """, 
     CONSTRAINT """ + self.iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
-    ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpace) + """
+    ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpaceIOT) + """
     PCTFREE 0 NOLOGGING
 """ + self.getParallelString(self.numProcesses) + """AS
 SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
@@ -161,10 +186,13 @@ SELECT """  + (', '.join(cls)) + ' FROM ' + temp_iot)
         """
         Gather optimiser statistics.
         """
-        ora.mogrifyExecute(cursor, "ANALYZE TABLE " + self.iotTableName + "  compute system statistics for table")
+        ora.mogrifyExecute(cursor, "ANALYZE TABLE " + self.iotTableName + \
+        "  compute system statistics for table")
+     
         ora.mogrifyExecute(cursor,"""
 BEGIN
-    dbms_stats.gather_table_stats('""" + self.user + """','""" + self.iotTableName + """',NULL,NULL,FALSE,'FOR ALL COLUMNS SIZE AUTO',8,'ALL');
+    dbms_stats.gather_table_stats('""" + self.user + """','""" + self.iotTableName + \
+    """',NULL,NULL,FALSE,'FOR ALL COLUMNS SIZE AUTO',8,'ALL');
 END;""")
 
 

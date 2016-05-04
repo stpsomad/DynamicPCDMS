@@ -24,6 +24,7 @@ for integr in integrations:
         queries = []
         for i in range(1,4):
             configuration = 'D:/Dropbox/Thesis/Thesis/Code/ini/zandmotor/{0}_{1}_part{2}.ini'.format(integr, scaling, i)
+            
             bulk = BulkLoader(configuration)
             loading = []
             loading.append(benchmark[i - 1])

@@ -346,7 +346,7 @@ def inverseDaySinceEpoch(num, start = 1990):
     Returns:
         tuple: the year, month and day
     """
-    d = datetime.date.fromordinal(datetime.datetime(start, 1, 1) + num  - 1)
+    d = datetime.date.fromordinal(datetime.date.toordinal(datetime.datetime(start, 1, 1)) + num  - 1)
     return d.year, d.month, d.day
 
 def formatTime(t):
