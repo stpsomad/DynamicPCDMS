@@ -293,7 +293,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         
         connection = self.getConnection()
         cursor = connection.cursor()
-        cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[rangeTable,])
+        cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[rangeTable.upper(),])
         length = len(cursor.fetchall())
         connection.close()
         if length:
@@ -407,9 +407,7 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere, self.numProce
             else:
                 query = self.getCTASStatement(queryTab, self.getTableSpaceString(self.tableSpace)) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere, self.numProcesses) + ')'
-        ######
-        print query
-        ######
+
         connection = self.getConnection()
         cursor = connection.cursor()
         ora.dropTable(cursor, queryTab, check)
@@ -446,16 +444,18 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere, self.numProce
 
         if whereStatement is not '':
             if rangeTab is not None:
-                query = "select " + self.getHintStatement('USE_NL (t r)') + \
-" " + ', '.join(['t.'+i for i in self.columnNames]) + """
- from """ + self.iotTableName + " t, " + rangeTab + """ r 
- """ + whereStatement
-
-            else:
-                query = "select "+ self.getHintStatement(self.getParallelString(self.numProcesses)) + ', '.join(self.columnNames) + """ 
-from """ + self.iotTableName + """ t 
+                query = "SELECT " + self.getHintStatement(['USE_NL (t r)', self.getParallelString(self.numProcesses)]) + \
+" " + ', '.join(['t.'+ i for i in self.columnNames]) + """
+FROM """ + self.iotTableName + " t, " + rangeTab + """ r 
 """ + whereStatement
 
+            else:
+                query = "select "+ self.getHintStatement([self.getParallelString(self.numProcesses)]) + ', '.join(self.columnNames) + """ 
+from """ + self.iotTableName + """ t 
+""" + whereStatement
+            #######
+            print query
+            #######
             start1 = time.time()
             ora.mogrifyExecute(cursor, query)
             result = cursor.fetchall()
@@ -503,7 +503,7 @@ from """ + self.iotTableName + """ t
 """ + self.getTableSpaceString(self.tableSpace) + """
 AS SELECT * 
 FROM (
-    SELECT """ + self.getHintStatement(self.getParallelString(self.numProcesses)) + \
+    SELECT """ + self.getHintStatement([self.getParallelString(self.numProcesses)]) + \
     """ X, Y, Z, TO_DATE(TIME, 'yyyy/mm/dd') as TIME 
     FROM """ + qTable +"""
     ) 
@@ -511,13 +511,11 @@ FROM (
                     else:
                         query = "CREATE TABLE " + queryTab + """
 """ + self.getTableSpaceString(self.tableSpace) + """ 
-    AS SELECT """ + self.getHintStatement(self.getParallelString(self.numProcesses)) + \
+    AS SELECT """ + self.getHintStatement([self.getParallelString(self.numProcesses)]) + \
     """ X, Y, Z, TIME 
     FROM """+ qTable + """" 
     """ + whereValue
-                    #####
-                    print query
-                    #####
+
                     start1 = time.time()
                     cursor.execute(query)
                     end = round(time.time() - start1, 2)
@@ -636,17 +634,17 @@ fields terminated by ','
         ctfile.write('\nBEGINDATA\n')
         ctfile.write(data)
         ctfile.close()
-#        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " parallel=true direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
-        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
+        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " parallel=true direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
+#        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
         return sqlLoaderCommand
         
     def getHintStatement(self, hints):
         """
         Composes the SQL statement for using optimizer hints.
         """
-        if len(hints):
-            return ' /*+ ' + ' '.join(hints) + ' */ '
-        return ''
+        if hints == ['']:
+            return ''
+        return ' /*+ ' + ' '.join(hints) + ' */ '
         
     def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition, numProcesses = 1):
         """
@@ -692,31 +690,32 @@ def format_lst(lst):
                  
 if __name__ == "__main__":
     dataset = 'zandmotor'
-    case = 'lxyt_1_part1'    
+    case = 'dxyt_10000_part1'    
     
     hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
     queries = []    
     
     path = os.getcwd()
     configuration = path + '/ini/' + dataset + '/' + case + '.ini'
-    os.system('python -m pointcloud.queryTab ' + configuration)
+#    os.system('python -m pointcloud.queryTab ' + configuration)
 
     querier = Querier(configuration)
     connection = querier.getConnection()
     cursor = connection.cursor()
 
     for num in querier.ids:
-        start = time.time()
-        lst = querier.query(num)
-        lst.append(round(time.time() - start, 2))
-        lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
-        lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
-        lst.insert(0, num)
-        queries.append(lst)
-        print tabulate([lst], hquery, tablefmt="plain")
+        for j in range(3):
+            start = time.time()
+            lst = querier.query(num)
+            lst.append(round(time.time() - start, 2))
+            lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
+            lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
+            lst.insert(0, num)
+            queries.append(lst)
+            ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
+            print tabulate([lst], hquery, tablefmt="plain")
 
     for num in querier.ids:
-        ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
         if querier.integration == 'deep':
             ora.dropTable(cursor, querier.rangeTable + str(num))
     print

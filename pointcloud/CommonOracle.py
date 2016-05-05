@@ -138,7 +138,7 @@ class Oracle:
         """
         parallelString = ''
         if numProcesses > 1:
-            parallelString = ' PARALLEL ' + str(numProcesses) + ' '
+            parallelString = ' PARALLEL(' + str(numProcesses) + ') '
         return parallelString
     
     def getTableSpaceString(self, tableSpace):

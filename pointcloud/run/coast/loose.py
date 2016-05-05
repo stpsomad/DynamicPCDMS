@@ -13,9 +13,9 @@ import pointcloud.oracleTools as ora
 import os
 
 ###########################
-dataset = 'zandmotor'
-integrations = ['dxyt']
-scalings = ['10000']
+dataset = 'coastline'
+integrations = ['lxyt', 'lxyzt']
+scalings = ['1']
 repeatQueries = 6
 ###########################
 
@@ -59,15 +59,18 @@ for integr in integrations:
             
             loadings.append(loading)
             print tabulate(loadings, hloading, tablefmt="plain")
-            
-            if i == 1:
-                os.system('python -m pointcloud.queryTab {0}'.format(configuration))
 
             hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
         
             querier = Querier(configuration)
-            connection = bulk.getConnection()
+            connection = querier.getConnection()
             cursor = connection.cursor()
+            
+            cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[querier.queriesTable.upper(),])
+            length = len(cursor.fetchall())
+            connection.close()
+            if not length:
+                os.system('python -m pointcloud.queryTab {0}'.format(configuration))
 
             for num in querier.ids:
                 for j in range(repeatQueries):
@@ -86,7 +89,7 @@ for integr in integrations:
 
     
     print 'Writing file with results for case: {0} {1} {2}'.format(bulk.integration, bulk.parse, bulk.scale)
-    f = open(path + '/resutls/{0}.txt'.format(integr), 'a')
+    f = open(path + '/results/{0}/{1}.txt'.format(dataset, integr), 'a')
     f.write('Statistics for case: {0} {1} {2}\n'.format(bulk.integration, bulk.parse, bulk.scale))
     f.write('Loading')
     f.write(tabulate(loadings, hloading, tablefmt="plain"))

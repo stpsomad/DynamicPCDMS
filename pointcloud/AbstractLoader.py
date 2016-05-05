@@ -83,13 +83,7 @@ fields terminated by ','
         Creates a empty flat table
         """
         ora.dropTable(cursor, tableName, True)
-        ######
-        print """
-CREATE TABLE """ + tableName + """ (
-""" + (',\n'.join(self.getHeapColumns())) + """) 
-""" + self.getTableSpaceString(tableSpace) + """ 
-pctfree 0 nologging"""
-        #####
+
         ora.mogrifyExecute(cursor,"""
 CREATE TABLE """ + tableName + """ (
 """ + (',\n'.join(self.getHeapColumns())) + """) 
@@ -121,18 +115,7 @@ LOCATION ('""" + txtFiles + """')
         ora.dropTable(cursor, iotTableName, True)
         
         cls = [', '.join(i[0] for i in self.columns)]
-        #####
-        print """
-CREATE TABLE """ + iotTableName + """
-(""" + (', '.join(cls)) + """, 
-    CONSTRAINT """ + iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
-    ORGANIZATION INDEX
-    """ + self.getTableSpaceString(tableSpace) + """
-    PCTFREE 0 NOLOGGING
-""" + self.getParallelString(numProcesses) + """
-AS
-    SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName
-        #####
+        
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + iotTableName + """
 (""" + (', '.join(cls)) + """, 
@@ -155,19 +138,6 @@ AS
         ora.renameIndex(cursor, self.iotTableName + '_PK', temp_iot + '_PK')
         
         cls = [', '.join(i[0] for i in self.columns)]
-        
-        ######
-        print """
-CREATE TABLE """ + self.iotTableName + """
-(""" + (', '.join(cls)) + """, 
-    CONSTRAINT """ + self.iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
-    ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpaceIOT) + """
-    PCTFREE 0 NOLOGGING
-""" + self.getParallelString(self.numProcesses) + """AS
-SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
-UNION ALL
-SELECT """  + (', '.join(cls)) + ' FROM ' + temp_iot
-        ######
         
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + self.iotTableName + """

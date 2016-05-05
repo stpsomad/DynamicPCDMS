@@ -5,7 +5,7 @@
 #   Version 2.0, January 2004                                                  #
 #                                                                              #
 #    Extended by: Stella Psomadaki                                             #
-#    Source: Stackoverflow http://bit.ly/1YrXQdj                                      #
+#    Source: Stackoverflow http://bit.ly/1YrXQdj                               #
 ################################################################################
 from numba import jit, int32, int64
 

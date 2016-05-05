@@ -17,7 +17,6 @@ import time
 from time import strptime, localtime
 import datetime
 
-# use numba for efficiency
 from numba import jit
 
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug",
