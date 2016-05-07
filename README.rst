@@ -10,8 +10,12 @@ Over the last years, point cloud usage has seen a rapid growth and it is expecte
 
 This repository contains the code generated as part of a thesis undertaken at TU Delft (Netherlands) and the research institute Deltares that explores ways to efficiently manage spatio-temporal point clouds. Within this a space-filling approach is followed along with two variations of space and time integration.
 
+TO DO:
+--------
+* Use iterator when fetching the data and not fetchall() in one go
 
-* Free software: ISC license 
+
+Free software: ISC license 
 
 Credits
 ---------
