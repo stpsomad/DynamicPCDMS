@@ -18,8 +18,9 @@ from pointcloud.CommonOracle import Oracle
 import pointcloud.reader as reader
 import pointcloud.whereClause as whereClause
 from pointcloud.structures.geometry import Polygon3D, dynamicPolygon, Polygon4D
-from tabulate import tabulate
 import os
+
+#TODO: PUT ITERATOR WHEN FETCHING THE DATA
 
 class Querier(Oracle):
     def __init__(self, configuration):
@@ -90,7 +91,7 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
         self.mortonJoinWhere = '(t.morton BETWEEN r.low AND r.upper)'
         if self.granularity == 'day':
             self.queryColumns = ['time VARCHAR2(20)', 'X NUMBER', 'Y NUMBER', 'Z FLOAT']
-            self.params = [0, 4, 4, 3, 1, -2, 0, 3, 4, 0, 0, 4, 3, 0, 3, 4, 1, 4]
+            self.params = [1, 4, 4, 3, 1, -2, 0, 3, 4, 0, 0, 4, 3, 0, 3, 4, 1, 4]
         else:
             self.queryColumns = ['time INTEGER', 'X NUMBER','Y NUMBER', 'Z FLOAT']
             self.params = [0, 4, 4, 3, 8, 1, 2, 8, 9, 2, 2, 9, 7, 3, 8, 12, 3, 11]
@@ -453,9 +454,7 @@ FROM """ + self.iotTableName + " t, " + rangeTab + """ r
                 query = "select "+ self.getHintStatement([self.getParallelString(self.numProcesses)]) + ', '.join(self.columnNames) + """ 
 from """ + self.iotTableName + """ t 
 """ + whereStatement
-            #######
-            print query
-            #######
+
             start1 = time.time()
             ora.mogrifyExecute(cursor, query)
             result = cursor.fetchall()
@@ -634,8 +633,7 @@ fields terminated by ','
         ctfile.write('\nBEGINDATA\n')
         ctfile.write(data)
         ctfile.close()
-        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " parallel=true direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
-#        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
+        sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
         return sqlLoaderCommand
         
     def getHintStatement(self, hints):
@@ -686,37 +684,3 @@ def getTime(granularity, start, end):
                  
 def format_lst(lst):
     return '\n'.join([','.join(map(str,i)) for i in lst])
-                 
-                 
-if __name__ == "__main__":
-    dataset = 'zandmotor'
-    case = 'dxyt_10000_part1'    
-    
-    hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
-    queries = []    
-    
-    path = os.getcwd()
-    configuration = path + '/ini/' + dataset + '/' + case + '.ini'
-#    os.system('python -m pointcloud.queryTab ' + configuration)
-
-    querier = Querier(configuration)
-    connection = querier.getConnection()
-    cursor = connection.cursor()
-
-    for num in querier.ids:
-        for j in range(3):
-            start = time.time()
-            lst = querier.query(num)
-            lst.append(round(time.time() - start, 2))
-            lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
-            lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
-            lst.insert(0, num)
-            queries.append(lst)
-            ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
-            print tabulate([lst], hquery, tablefmt="plain")
-
-    for num in querier.ids:
-        if querier.integration == 'deep':
-            ora.dropTable(cursor, querier.rangeTable + str(num))
-    print
-    print tabulate(queries, hquery, tablefmt="plain")

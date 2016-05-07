@@ -69,7 +69,6 @@ for integr in integrations:
 
             cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[querier.queriesTable.upper(),])
             length = len(cursor.fetchall())
-            connection.close()
             if not length:
                 os.system('python -m pointcloud.queryTab {0}'.format(configuration))
 
