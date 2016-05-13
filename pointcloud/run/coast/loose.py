@@ -88,7 +88,7 @@ for integr in integrations:
 
     
     print 'Writing file with results for case: {0} {1} {2}'.format(bulk.integration, bulk.parse, bulk.scale)
-    f = open(path + '/results/{0}/{1}.txt'.format(dataset, integr), 'a')
+    f = open('loose_coast_xyt.txt', 'a')
     f.write('Statistics for case: {0} {1} {2}\n'.format(bulk.integration, bulk.parse, bulk.scale))
     f.write('Loading')
     f.write(tabulate(loadings, hloading, tablefmt="plain"))

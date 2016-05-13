@@ -83,7 +83,7 @@ fields terminated by ','
         Creates a empty flat table
         """
         ora.dropTable(cursor, tableName, True)
-
+        
         ora.mogrifyExecute(cursor,"""
 CREATE TABLE """ + tableName + """ (
 """ + (',\n'.join(self.getHeapColumns())) + """) 
@@ -115,7 +115,7 @@ LOCATION ('""" + txtFiles + """')
         ora.dropTable(cursor, iotTableName, True)
         
         cls = [', '.join(i[0] for i in self.columns)]
-        
+          
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + iotTableName + """
 (""" + (', '.join(cls)) + """, 
@@ -123,10 +123,10 @@ CREATE TABLE """ + iotTableName + """
     ORGANIZATION INDEX
     """ + self.getTableSpaceString(tableSpace) + """
     PCTFREE 0 NOLOGGING
-""" + self.getParallelString(numProcesses) + """
-AS
-    SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName)
-    
+""" + self.getParallelStringIOT(numProcesses) + """
+    AS
+        SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName)
+        
     def addIOTUnionAll(self, cursor):
         """
         Inserting additional data to the table by UNIONing the current IOT with 
@@ -138,17 +138,17 @@ AS
         ora.renameIndex(cursor, self.iotTableName + '_PK', temp_iot + '_PK')
         
         cls = [', '.join(i[0] for i in self.columns)]
-        
+       
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + self.iotTableName + """
-(""" + (', '.join(cls)) + """, 
-    CONSTRAINT """ + self.iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
+(""" + (', '.join(cls)) + ",  PRIMARY KEY("+ self.index + """))
     ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpaceIOT) + """
     PCTFREE 0 NOLOGGING
-""" + self.getParallelString(self.numProcesses) + """AS
-SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
-UNION ALL
-SELECT """  + (', '.join(cls)) + ' FROM ' + temp_iot)
+    """ + self.getParallelStringIOT(self.numProcesses) + """
+    AS
+        SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
+        UNION ALL
+        SELECT """  + (', '.join(cls)) + ' FROM ' + temp_iot)
 
         ora.dropTable(cursor, temp_iot)
 
@@ -239,6 +239,11 @@ END;""")
         number_total = ora.getNumPoints(connection, cursor, self.iotTableName)
         connection.close()
         return size_total, number_total
+        
+    def getParallelStringIOT(self, numProcesses):
+        if numProcesses > 1:
+            return 'PARALLEL ' + str(numProcesses)
+        return ''
         
 #    def round2resolution(array, predicate):
 #        return np.round(array - np.mod(predicate + array, predicate), 0)

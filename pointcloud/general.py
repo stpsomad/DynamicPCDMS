@@ -56,6 +56,11 @@ EQ_DIM = {
     'time' : 't'
 }
 
+REVERSE_DIM = {
+    'm': 'morton',
+    'z': 'z',
+    't': 'time'}
+
 DIRS = {
     'part1': '/pak2/usrdata/stella/Zandmotor_bench/part1/',
     'part2': '/pak2/usrdata/stella/Zandmotor_bench/part2/',

@@ -108,7 +108,7 @@ class Oracle:
         column = self.cols[index]
         if column not in general.DM_FLAT:
             raise Exception('Wrong column!' + column)
-        columnName = 'VAL_D' + str(index+1)
+        columnName = general.REVERSE_DIM[column]
         if includeType:
             return (columnName, general.DM_FLAT[column])
         else:
