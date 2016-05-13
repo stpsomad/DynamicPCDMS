@@ -141,7 +141,7 @@ CREATE TABLE """ + iotTableName + """
        
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + self.iotTableName + """
-(""" + (', '.join(cls)) + ",  PRIMARY KEY("+ self.index + """))
+(""" + (', '.join(cls)) + ", CONSTRAINT """ + self.iotTableName + "_PK PRIMARY KEY("+ self.index + """))
     ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpaceIOT) + """
     PCTFREE 0 NOLOGGING
     """ + self.getParallelStringIOT(self.numProcesses) + """
