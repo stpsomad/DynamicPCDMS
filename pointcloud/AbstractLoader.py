@@ -9,10 +9,10 @@ Author: Oscar Martinez Rubi
 Apache License
 Version 2.0, January 2004
 """
+
 import pointcloud.general as general
 import pointcloud.oracleTools as ora
 import os
-#import numpy as np
 from CommonOracle import Oracle
 
 class Loader(Oracle):
@@ -54,10 +54,9 @@ class Loader(Oracle):
         Generates the control file for the sqlldr and composes the sqlloader
         command.
         """
-        commonFile = 'loader'
-        controlFile = commonFile + '.ctl'
-        badFile = commonFile + '.bad'
-        logFile = commonFile + '.log'
+        controlFile = tableName + '.ctl'
+        badFile = tableName + '.bad'
+        logFile = tableName + '.log'
         
         ctfile = open(controlFile,'w')
         sqlldrCols = []
@@ -106,7 +105,7 @@ ACCESS PARAMETERS (
     FIELDS TERMINATED BY ', ')
 LOCATION ('""" + txtFiles + """')
 )
-""" + self.getParallelString(numProcesses) + """ REJECT LIMIT 0""")     
+""" + self.getParallelStringCTAS(numProcesses) + """ REJECT LIMIT 0""")     
         
     def createIOTTable(self, cursor, iotTableName, tableName, tableSpace, numProcesses):
         """
@@ -123,7 +122,7 @@ CREATE TABLE """ + iotTableName + """
     ORGANIZATION INDEX
     """ + self.getTableSpaceString(tableSpace) + """
     PCTFREE 0 NOLOGGING
-""" + self.getParallelStringIOT(numProcesses) + """
+""" + self.getParallelStringCTAS(numProcesses) + """
     AS
         SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName)
         
@@ -144,7 +143,7 @@ CREATE TABLE """ + self.iotTableName + """
 (""" + (', '.join(cls)) + ", CONSTRAINT """ + self.iotTableName + "_PK PRIMARY KEY("+ self.index + """))
     ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpaceIOT) + """
     PCTFREE 0 NOLOGGING
-    """ + self.getParallelStringIOT(self.numProcesses) + """
+    """ + self.getParallelStringCTAS(self.numProcesses) + """
     AS
         SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
         UNION ALL
@@ -240,10 +239,7 @@ END;""")
         connection.close()
         return size_total, number_total
         
-    def getParallelStringIOT(self, numProcesses):
+    def getParallelStringCTAS(self, numProcesses):
         if numProcesses > 1:
             return 'PARALLEL ' + str(numProcesses)
         return ''
-        
-#    def round2resolution(array, predicate):
-#        return np.round(array - np.mod(predicate + array, predicate), 0)

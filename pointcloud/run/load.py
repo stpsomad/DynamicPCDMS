@@ -11,6 +11,8 @@ from tabulate import tabulate
 import os
 
 ###########################
+###   Setup Variables   ###
+###########################
 dataset = 'zandmotor'
 integrations = ['lxyt']
 scalings = ['1']
@@ -19,8 +21,7 @@ scalings = ['1']
 if dataset == 'zandmotor':
     bench = 3
 elif dataset == 'coastline':
-    bench = 4
-    
+    bench = 4 
 
 path = os.getcwd()
 benchmark = ['mini', 'medium', 'full']  

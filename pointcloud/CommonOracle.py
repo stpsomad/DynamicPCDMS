@@ -26,20 +26,20 @@ class Oracle:
         config.read(configurationFile)
         self.configFile = configurationFile
         
+        # Setting up the option
         self.format = config.get('benchmark-options', 'format')
-        self.type = config.get('benchmark-options', 'integration')
-        self.clustering = config.get('benchmark-options', 'clustering')
-        self.dataset = config.get('benchmark-options', 'dataset')
+        self.clustering = config.get('benchmark-options', 'clustering') #Morton
+        self.dataset = config.get('benchmark-options', 'dataset') #zandmotor, coastline
         self.db = config.get('benchmark-options', 'db')
-        self.parse = config.get('benchmark-options', 'parse')
-        self.loader = config.get('benchmark-options', 'loader')
-        self.integration = config.get('benchmark-options', 'integration')
+        self.parse = config.get('benchmark-options', 'parse') #xyt, xyzt
+        self.loader = config.get('benchmark-options', 'loader') #sqlldr, external, incremental
+        self.integration = config.get('benchmark-options', 'integration') #loose, deep
         self.ORCLdirectory = config.get('data-dir', 'ORCLdirectory')
         self.directory = general.DIRS[self.ORCLdirectory]
-        self.init = config.getboolean('benchmark-options', 'init')
-        self.update = config.get('benchmark-options', 'update')
+        self.init = config.getboolean('benchmark-options', 'init') #true, false
+        self.update = config.get('benchmark-options', 'update') #dump, union, resort
         self.scale = config.getint('benchmark-options', 'scale')
-        self.granularity = config.get('benchmark-options', 'granularity')
+        self.granularity = config.get('benchmark-options', 'granularity') #day, year
         
         if self.integration not in ['deep', 'loose']:
             raise Exception('ERROR: Not supported data structure')
@@ -50,6 +50,7 @@ class Oracle:
         if self.parse.lower() not in ['xyt', 'xyzt']:
             raise Exception('ERROR: Cannot parse specified object. Use either xyt or xyzt')
         
+        # Database connection        
         self.user = config.get(self.db, 'User')
         self.password = config.get(self.db, 'Pass')
         self.host = config.get(self.db, 'Host')
@@ -65,6 +66,7 @@ class Oracle:
         # Number of processes for loading
         self.numProcesses = config.getint('database','numProcesses')
         
+        # table columns
         if self.integration.lower() == "loose":
             if self.parse.lower() == 'xyt':
                 self.columns = config.items('columns-loose-xyt')
@@ -77,10 +79,10 @@ class Oracle:
             else:
                 self.columns = config.items('columns-deep-xyzt')
             self.index = 'morton'
-                
         self.cols = self.eqColumns() #e.g. ['m', 't', 'z']
         self.columnNames = [i[0] for i in self.columns]
         
+        # name depending on the type of loader
         if self.loader == 'external':
             self.tableName = self.dataset[0] + self.integration[0] + self.parse + str(self.scale) +"_temp_ext"
             self.iotTableName = self.dataset[0] + self.integration[0] + self.parse + str(self.scale) + '_ext' 

@@ -95,7 +95,7 @@ def converter(ini_file):
             fh.close()
             
     #ugly workaround, how else?
-    f = open('morton_timer.txt', 'a')
+    f = open('morton_{0}.txt'.format(initialise.iotTableName), 'a')
     f.write(str(counter))
     f.write(str('\n'))
     f.close()
