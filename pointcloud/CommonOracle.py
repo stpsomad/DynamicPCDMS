@@ -94,6 +94,7 @@ class Oracle:
         elif self.loader == 'incremental':
             self.iotTableName = self.dataset[0] + self.integration[0] + self.parse + str(self.scale) + "_incr"
             self.metaTable = 'meta' + self.iotTableName
+        
             
     def eqColumns(self):
         """

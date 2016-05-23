@@ -71,7 +71,6 @@ def addTimeCondition(timeRanges, timeColumn, ttype = 'continuous'):
     """
     Composes the predicate of the time dimension    
     """
-    
     if ttype == None:
         return ''
     if ttype.lower() == 'continuous':

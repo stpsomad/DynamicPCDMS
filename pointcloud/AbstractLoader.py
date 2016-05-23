@@ -18,7 +18,7 @@ from CommonOracle import Oracle
 class Loader(Oracle):
     def __init__(self, configuration):
         Oracle.__init__(self, configuration)
-
+        
     def createUser(self):
         """
         Configures a new database user and grants the required priviledges.
@@ -77,6 +77,7 @@ fields terminated by ','
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' data=\\"-\\" bad=' + badFile + " log=" + logFile
         return sqlLoaderCommand
         
+
     def createFlatTable(self, cursor, tableName, tableSpace):
         """
         Creates a empty flat table
