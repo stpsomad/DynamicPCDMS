@@ -49,7 +49,7 @@ for integr in integrations:
             
             start = time.time()
             bulk.closing()
-            loading.append(str(0))
+            loading.append(round(time.time() - start, 2))
            
             size, points = bulk.statistics()
             loading.append(round(size,2))

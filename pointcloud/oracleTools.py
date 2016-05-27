@@ -8,7 +8,8 @@ This module contains Oracle related functions. The functions mostly contain SQL
 commands to be posed to the database. 
 
 Note: functions getConnectString, getNumPoints, mogrify, mogrifyExecute, 
-    dropTable, createUser, createDirectory have the following source:
+    dropTable, createUser, createDirectory, getSizeTable, getSizeUserSDOIndexes
+    have the following source:
     https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud
     by: Oscar Martinez Rubi
     Apache License
@@ -21,12 +22,6 @@ except ImportError:
 	print "cx_Oracle module cannot be found"
 	raise
 
-def connectSYSDBA():
-    """
-    Connect to superuser for local database
-    """
-    return cx_Oracle.connect(mode = cx_Oracle.SYSDBA)
-    
 def createUser(cursorSuper, userName, password, tableSpace, tempTableSpace):
     """
     Creates a user in Oracle.If the user name already exists, it is dropped.
@@ -278,16 +273,6 @@ SELECT *
 FROM {1}""".format(iotTableName, tableName))
     connection.commit()
     
-def getSizeTable(cursor, tableName, super = True):
-    """
-    Get the size of a table in MB.
-    """
-    cursor.execute("""SELECT bytes/1024/1024 size_in_MB FROM user_segments WHERE segment_name = '{0}'""".format(tableName.upper() + '_PK'))
-    size = cursor.fetchall()[0][0]
-    if size == None:
-        size = 0
-    return size
-    
 def renameTable(cursor, oldName, newName):
     """
     Rename the specified table.
@@ -307,3 +292,128 @@ def renameIndex(cursor, oldIndexName, newIndexName):
     """
     cursor.execute("""ALTER INDEX {0} RENAME TO {1}""".format(oldIndexName, newIndexName))
     
+def getSizeTable(cursor, tableName):
+    """ Get the size in MB of a table. (Includes the size of the table and the 
+    large objects (LOBs) contained in table."""
+    tableName = tableName.upper()
+    try:
+        if type(tableName) == str:
+            tableName = [tableName, ]
+        
+        queryArgs = {}
+        segs = []
+        tabs = []
+        for i in range(len(tableName)):
+            name = 'name' + str(i)
+            queryArgs[name] = tableName[i]
+            segs.append('segment_name = :' + name)
+            tabs.append('table_name = :' + name)
+        
+        cursor.execute("""
+SELECT sum(bytes/1024/1024) size_in_MB FROM user_segments
+WHERE (""" + ' OR '.join(segs) + """
+OR segment_name in (
+SELECT segment_name FROM user_lobs
+WHERE """ + ' OR '.join(tabs) + """
+UNION
+SELECT index_name FROM user_lobs
+WHERE """ + ' OR '.join(tabs) + """
+)       
+)""", queryArgs)
+        
+        size = cursor.fetchall()[0][0]
+        if size == None:
+            size = 0
+    except:
+        size = 0
+    return size
+ 
+def getSizeUserSDOIndexes(cursor, tableName):
+    """ Get the size of the spatial indexes related to a table"""
+    tableName = tableName.upper()    
+    try:
+        cursor.callproc("dbms_output.enable")
+        q = """
+DECLARE
+size_in_mb  number;
+idx_tabname varchar2(32);
+BEGIN
+dbms_output.enable;
+SELECT sdo_index_table into idx_tabname FROM USER_SDO_INDEX_INFO
+where table_name = :name and sdo_index_type = 'RTREE';
+execute immediate 'analyze table '||idx_tabname||' compute system statistics for table';
+select blocks * 0.0078125 into size_in_mb from USER_TABLES where table_name = idx_tabname;
+dbms_output.put_line (to_char(size_in_mb));
+END;
+    """
+        cursor.execute(q, [tableName,])
+        statusVar = cursor.var(cx_Oracle.NUMBER)
+        lineVar = cursor.var(cx_Oracle.STRING)
+        size = float(cursor.callproc("dbms_output.get_line", (lineVar, statusVar))[0])
+    except:
+        size = 0
+    return size
+
+def computeStatistics(cursor, tableName, user):
+    """
+    Gather optimiser statistics.
+    """
+    mogrifyExecute(cursor, "ANALYZE TABLE " + tableName + \
+    "  compute system statistics for table")
+ 
+    mogrifyExecute(cursor,"""
+BEGIN
+dbms_stats.gather_table_stats('""" + user + """','""" + tableName + \
+"""',NULL,NULL,FALSE,'FOR ALL COLUMNS SIZE AUTO',8,'ALL');
+END;""")
+
+def spatialOperator(operator, table_geometry, query_geometry, parameter_string = ''):
+    params = ''    
+    if parameter_string:
+        params = ', ' + parameter_string  
+    return operator + "(" + table_geometry + ", " + query_geometry + params + ") = 'TRUE'"
+    
+def getParallelStringQuery(numProcesses):
+    """
+    Generates the hint for parallel execution.
+    """
+    parallelString = ''
+    if numProcesses > 1:
+        parallelString = ' PARALLEL(' + str(numProcesses) + ') '
+    return parallelString
+        
+def getHintStatement(hints):
+    """
+    Composes the SQL statement for using optimizer hints.
+    """
+    if hints == ['']:
+        return ''
+    return ' /*+ ' + ' '.join(hints) + ' */ '
+    
+def getTableSpaceString(tableSpace):
+    """
+    Generates the TABLESPACE predicate of the SQL query.
+    """
+    if tableSpace is not None and tableSpace != '':
+        return " TABLESPACE " + tableSpace + " "
+    else: 
+        return ""
+
+def getParallelString(numProcesses):
+    if numProcesses > 1:
+        return 'PARALLEL ' + str(numProcesses)
+    return ''
+    
+def getCTASStatement(tableName, tableSpace = ''):
+    """
+    Generates a CREATE TABLE ... AS SELECT ... statement.
+    """
+    return "CREATE TABLE " + tableName + """
+""" + tableSpace + """ 
+AS """
+
+def getSelectStatement(table, columns = '*', hints =''):
+    """
+    Generates a SELECT ... statement.
+    """
+    return "SELECT " + hints + ' ' + columns + " FROM " + table

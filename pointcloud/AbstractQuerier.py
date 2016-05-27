@@ -402,12 +402,12 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         
         if self.qtype.replace(' ', '').lower() != 'nn-search':
             if self.granularity == 'day':
-                query =  self.getCTASStatement(queryTab, self.getTableSpaceString(self.tableSpace)) + \
+                query =  ora.getCTASStatement(queryTab, ora.getTableSpaceString(self.tableSpace)) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z',
-self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere, self.numProcesses) + ')'
+self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
             else:
-                query = self.getCTASStatement(queryTab, self.getTableSpaceString(self.tableSpace)) + \
-'(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere, self.numProcesses) + ')'
+                query = ora.getCTASStatement(queryTab, ora.getTableSpaceString(self.tableSpace)) + \
+'(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere) + ')'
 
         connection = self.getConnection()
         cursor = connection.cursor()
@@ -445,13 +445,13 @@ self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere, self.numProce
 
         if whereStatement is not '':
             if rangeTab is not None:
-                query = "SELECT " + self.getHintStatement(['USE_NL (t r)', self.getParallelString(self.numProcesses)]) + \
+                query = "SELECT " + ora.getHintStatement(['USE_NL (t r)', ora.getParallelStringQuery(self.numProcesses)]) + \
 " " + ', '.join(['t.'+ i for i in self.columnNames]) + """
 FROM """ + self.iotTableName + " t, " + rangeTab + """ r 
 """ + whereStatement
 
             else:
-                query = "select "+ self.getHintStatement([self.getParallelString(self.numProcesses)]) + ', '.join(self.columnNames) + """ 
+                query = "select "+ ora.getHintStatement([ora.getParallelStringQuery(self.numProcesses)]) + ', '.join(self.columnNames) + """ 
 from """ + self.iotTableName + """ t 
 """ + whereStatement
 
@@ -499,18 +499,18 @@ from """ + self.iotTableName + """ t
                     
                     if self.granularity == 'day':
                         query = "CREATE TABLE " + queryTab + """
-""" + self.getTableSpaceString(self.tableSpace) + """
+""" + ora.getTableSpaceString(self.tableSpace) + """
 AS SELECT * 
 FROM (
-    SELECT """ + self.getHintStatement([self.getParallelString(self.numProcesses)]) + \
+    SELECT """ + ora.getHintStatement([ora.getParallelStringQuery(self.numProcesses)]) + \
     """ X, Y, Z, TO_DATE(TIME, 'yyyy/mm/dd') as TIME 
     FROM """ + qTable +"""
     ) 
 """ + whereValue
                     else:
                         query = "CREATE TABLE " + queryTab + """
-""" + self.getTableSpaceString(self.tableSpace) + """ 
-    AS SELECT """ + self.getHintStatement([self.getParallelString(self.numProcesses)]) + \
+""" + ora.getTableSpaceString(self.tableSpace) + """ 
+    AS SELECT """ + ora.getHintStatement([ora.getParallelStringQuery(self.numProcesses)]) + \
     """ X, Y, Z, TIME 
     FROM """+ qTable + """" 
     """ + whereValue
@@ -636,21 +636,21 @@ fields terminated by ','
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
         return sqlLoaderCommand
         
-    def getHintStatement(self, hints):
-        """
-        Composes the SQL statement for using optimizer hints.
-        """
-        if hints == ['']:
-            return ''
-        return ' /*+ ' + ' '.join(hints) + ' */ '
+#    def getHintStatement(self, hints):
+#        """
+#        Composes the SQL statement for using optimizer hints.
+#        """
+#        if hints == ['']:
+#            return ''
+#        return ' /*+ ' + ' '.join(hints) + ' */ '
         
-    def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition, numProcesses = 1):
+    def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition):
         """
         Composes the Point In Polygon SQL statement.
         """
-        return 'SELECT ' + self.getHintStatement(self.getParallelString(numProcesses)) + self.getSelectColumns('*') + """ 
+        return 'SELECT ' + ora.getHintStatement(ora.getParallelStringQuery(self.numProcesses)) + self.getSelectColumns('*') + """ 
 FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(
-""" + self.getSelectStatement(approxTable, self.getSelectColumns(columnsPIP)) + """), 
+""" + ora.getSelectStatement(approxTable, self.getSelectColumns(columnsPIP)) + """), 
 MDSYS.SDO_GEOMETRY('""" + self.wkt + """', """ + str(self.srid) + """), """ + str(self.tolerance) +"""))
 """ + condition
      

@@ -24,7 +24,6 @@ class Validate:
         config.read(configurationFile)
         self.configFile = configurationFile
         
-        
         self.dataset = config.get('parameters', 'dataset') #zandmotor, coastline
         self.db = config.get('parameters', 'db')
         self.index = config.getboolean('parameters', 'index') #true, false
@@ -51,6 +50,8 @@ class Validate:
         self.numProcesses = config.getint('database','numProcesses')
         
         self.spatialTable = 'valid_' + self.dataset[:3]
+        self.spatialTableRTree = self.spatialTable + "_idx"
+        self.spatialTableBTree = self.spatialTable + "_btree_idx"
         
         self.cols = ['X', 'Y', 'Z']
         self.lows = [69000, 449000, -100]
@@ -108,7 +109,7 @@ ALTER TABLE """ + tableName + """
 ADD CONSTRAINT ID_PK PRIMARY KEY (ID)
 """)
 
-    def createRTree(self, cursor, tableName, dim, tablespace, numProcesses):
+    def createRTree(self, cursor, tableName, indexName, dim, tablespace, numProcesses):
         indx = ''
         dims = ''
         if dims > 1:
@@ -116,20 +117,20 @@ ADD CONSTRAINT ID_PK PRIMARY KEY (ID)
         indx = "PARAMETERS('" + dims + " tablespace=" + tablespace + "') "
         
         ora.mogrifyExecute(cursor, """
-CREATE INDEX """ + tableName + "_idx ON " + tableName + """(GEOM)
-INDEXTYPE IS MDSYS.SPATIAL_INDEX """ + indx + getParallelString(numProcesses) + """
+CREATE INDEX """ + indexName + " ON " + tableName + """(GEOM)
+INDEXTYPE IS MDSYS.SPATIAL_INDEX """ + indx + ora.getParallelString(numProcesses) + """
 """)
 
     def rebuildIndex(self, cursor, tableName, numProcesses):
-        ora.mogrifyExecute(cursor, """ALTER INDEX """ + tableName + "_idx REBUILD" + getParallelString(numProcesses))
+        ora.mogrifyExecute(cursor, """ALTER INDEX """ + tableName + "_idx REBUILD" + ora.getParallelString(numProcesses))
         
     def dropSpatialIndex(self, cursor, tableName):
         ora.mogrifyExecute(cursor, "DROP INDEX " + tableName + "_idx")
     
-    def createIndex(self, cursor, tableName, tableSpace, numProcesses):
+    def createIndex(self, cursor, tableName, indexName, tableSpace, numProcesses):
         ora.mogrifyExecute(cursor, """
-CREATE INDEX """ + tableName + '_btree_idx ON ' + tableName  + """(TIME)
-""" + getTableSpaceString(tableSpace) + getParallelString(numProcesses))
+CREATE INDEX """ + indexName + ' ON ' + tableName  + """(TIME)
+""" + ora.getTableSpaceString(tableSpace) + ora.getParallelString(numProcesses))
     
     def composeDIM_ELEMENT(self, name, low, upper, tolerance):
         return """SDO_DIM_ELEMENT
@@ -176,7 +177,7 @@ SDO_DIM_ARRAY
             self.dropSpatialIndex(cursor, self.spatialTable)
 
         sqlldr = self.sqlldrSpatial(self.spatialTable)
-        command = """python -m pointcloud.las2txyz {0} | """.format(self.configFile) + sqlldr
+        command = """python -m pointcloud.test.las2txyz {0} | """.format(self.configFile) + sqlldr
         os.system(command)
         time1 = time.time() - start
 
@@ -185,17 +186,31 @@ SDO_DIM_ARRAY
         #=======================================================================#
         if self.index:
             start = time.time()
-            self.createRTree(cursor, self.spatialTable, self.dim, self.tableSpaceIndex, self.numProcesses)
+            self.createRTree(cursor, self.spatialTable, self.spatialTableRTree, self.dim, self.tableSpaceIndex, self.numProcesses)
             time2 = time.time() - start
             time3 = 0
             if self.init:
                 start = time.time()
-                self.createIndex(cursor, self.spatialTable, self.tableSpaceBtree, self.numProcesses)
+                self.createIndex(cursor, self.spatialTable, self.spatialTableBTree, self.tableSpaceBtree, self.numProcesses)
                 time3 = time.time() - start
         else:
             time2, time3 = 0, 0
-        return time1, time2, time3
-            
+        #=======================================================================#
+        #                       Gather Statistics Table
+        #=======================================================================#
+        # Non - spatial counterpart
+        start = time.time()
+        ora.computeStatistics(cursor, self.spatialTable, self.user)
+        time4 = time.time() - start
+        
+        #=======================================================================#
+        #                      Get Sizes Table and Indexes
+        #=======================================================================#
+        table = float(ora.getSizeTable(cursor, self.spatialTable))
+        btree = float(ora.getSizeTable(cursor, self.spatialTableBTree))
+        rtree = float(ora.getSizeUserSDOIndexes(cursor, self.spatialTable))
+        return time1, time2, time3, time4, table, btree, rtree
+
     def getConnectString(self, superUser = False):
         """
         Gets a connection string to establish a database connection.
@@ -213,31 +228,17 @@ SDO_DIM_ARRAY
             return connect(self.getConnectString(superUser))
         except:
             print "Connection could not be established"
-            
-def getParallelString(numProcesses):
-    if numProcesses > 1:
-        return ' PARALLEL ' + str(numProcesses)
-    return ''
-    
-def getTableSpaceString(tableSpace):
-    """
-    Generates the TABLESPACE predicate of the SQL query.
-    """
-    if tableSpace is not None and tableSpace != '':
-        return " TABLESPACE " + tableSpace + " "
-    else: 
-        return ""
     
 if __name__=="__main__":
     dataset = 'zandmotor'
     path = os.getcwd()   
-    configuration = path + '/ini/' + dataset + '/validation.ini'
+    configuration = path + '/ini/' + dataset + '/validation_part1.ini'
     validate = Validate(configuration)
     connection = validate.getConnection()
     
-    load, rtree, btree = validate.loadSpatialSqlldr(connection)
+    load, rtree, btree, stats, sizet, sizeb, sizer = validate.loadSpatialSqlldr(connection)
 
     # print stats    
-    hloading = ['load', 'rtree', 'btree']
-    loading = [[load, rtree, btree]]
+    hloading = ['load[s]', 'rtree[s]', 'btree[s]', 'stats[s]', 'table[MB]', 'Btree[MB]', 'Rtree[MB]', 'total[MB]']
+    loading = [[load, rtree, btree, stats, sizet, sizeb, sizer, sizet + sizeb + sizer]]
     print tabulate(loading, hloading, tablefmt="plain")

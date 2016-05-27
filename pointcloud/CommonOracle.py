@@ -134,35 +134,3 @@ class Oracle:
             return connect(self.getConnectString(superUser))
         except:
             print "Connection could not be established"
-            
-    def getParallelString(self, numProcesses):
-        """
-        Generates the hint for parallel execution.
-        """
-        parallelString = ''
-        if numProcesses > 1:
-            parallelString = ' PARALLEL(' + str(numProcesses) + ') '
-        return parallelString
-    
-    def getTableSpaceString(self, tableSpace):
-        """
-        Generates the TABLESPACE predicate of the SQL query.
-        """
-        if tableSpace is not None and tableSpace != '':
-            return " TABLESPACE " + tableSpace + " "
-        else: 
-            return ""
-        
-    def getCTASStatement(self, tableName, tableSpace = ''):
-        """
-        Generates a CREATE TABLE ... AS SELECT ... statement.
-        """
-        return "CREATE TABLE " + tableName + """
-""" + tableSpace + """ 
-AS """
-        
-    def getSelectStatement(self, table, columns = '*', hints =''):
-        """
-        Generates a SELECT ... statement.
-        """
-        return "SELECT " + hints + ' ' + columns + " FROM " + table

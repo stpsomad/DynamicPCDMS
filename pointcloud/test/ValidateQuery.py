@@ -4,8 +4,9 @@ Created on Mon May 23 11:13:39 2016
 
 @author: Stella Psomadaki
 """
-from pointcloud.Validator import Validate
+from pointcloud.test.Validator import Validate
 from ConfigParser import ConfigParser
+import pointcloud.oracleTools as ora
 import time
 import os
 
@@ -33,7 +34,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
 
         self.qtype, self.timeType = cursor.fetchall()[0]
 
-        base = "SELECT " + getHintStatement([getParallelString(self.numProcesses)]) + """ t.GEOM AS GEOMETRY, t.TIME AS TIME
+        base = "SELECT " + ora.getHintStatement([ora.getParallelStringQuery(self.numProcesses)]) + """ t.GEOM AS GEOMETRY, t.TIME AS TIME
 FROM """ + self.spatialTable + """ t, """ + self.queriesTable + """ q
 WHERE q.ID = """ + str(qid) + """ AND 
 """
@@ -44,9 +45,9 @@ WHERE q.ID = """ + str(qid) + """ AND
             else:
                 query = base + "(t.TIME IN (Q.START_DATE, Q.END_DATE))"
             query += """
-AND """ + spatialOperator('SDO_ANYINTERACT', 't.GEOM', 'q.GEOMETRY')
+AND """ + ora.spatialOperator('SDO_ANYINTERACT', 't.GEOM', 'q.GEOMETRY')
         elif self.qtype == 'space':
-            query =  base + spatialOperator('SDO_ANYINTERACT', 't.GEOM', 'q.GEOMETRY')
+            query =  base + ora.spatialOperator('SDO_ANYINTERACT', 't.GEOM', 'q.GEOMETRY')
         elif self.qtype == 'time':
             if self.timeType == 'continuous':
                 query = base + "(t.TIME BETWEEN Q.START_DATE AND Q.END_DATE)"
@@ -58,31 +59,6 @@ AND """ + spatialOperator('SDO_ANYINTERACT', 't.GEOM', 'q.GEOMETRY')
         cursor.fetchall()
         end = time.time()        
         return end - start
-
-def spatialOperator(operator, table_geometry, query_geometry, parameter_string = ''):
-    params = ''    
-    if parameter_string:
-        params = ', ' + parameter_string  
-    return operator + "(" + table_geometry + ", " + query_geometry + params + ") = 'TRUE'"
-    
-def getParallelString(numProcesses):
-    """
-    Generates the hint for parallel execution.
-    """
-    parallelString = ''
-    if numProcesses > 1:
-        parallelString = ' PARALLEL(' + str(numProcesses) + ') '
-    return parallelString
-        
-def getHintStatement(hints):
-    """
-    Composes the SQL statement for using optimizer hints.
-    """
-    if hints == ['']:
-        return ''
-    return ' /*+ ' + ' '.join(hints) + ' */ '
-
-
 
 if __name__ == "__main__":
     dataset = 'zandmotor'

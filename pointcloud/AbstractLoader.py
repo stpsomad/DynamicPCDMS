@@ -87,7 +87,7 @@ fields terminated by ','
         ora.mogrifyExecute(cursor,"""
 CREATE TABLE """ + tableName + """ (
 """ + (',\n'.join(self.getHeapColumns())) + """) 
-""" + self.getTableSpaceString(tableSpace) + """ 
+""" + ora.getTableSpaceString(tableSpace) + """ 
 pctfree 0 nologging""")
 
     def createExternalTable(self, cursor, txtFiles, tableName, txtDirVariableName, numProcesses):
@@ -106,7 +106,7 @@ ACCESS PARAMETERS (
     FIELDS TERMINATED BY ', ')
 LOCATION ('""" + txtFiles + """')
 )
-""" + self.getParallelStringCTAS(numProcesses) + """ REJECT LIMIT 0""")     
+""" + ora.getParallelString(numProcesses) + """ REJECT LIMIT 0""")     
         
     def createIOTTable(self, cursor, iotTableName, tableName, tableSpace, numProcesses):
         """
@@ -121,9 +121,9 @@ CREATE TABLE """ + iotTableName + """
 (""" + (', '.join(cls)) + """, 
     CONSTRAINT """ + iotTableName + """_PK PRIMARY KEY (""" + self.index + """))
     ORGANIZATION INDEX
-    """ + self.getTableSpaceString(tableSpace) + """
+    """ + ora.getTableSpaceString(tableSpace) + """
     PCTFREE 0 NOLOGGING
-""" + self.getParallelStringCTAS(numProcesses) + """
+""" + ora.getParallelString(numProcesses) + """
     AS
         SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + tableName)
         
@@ -142,9 +142,9 @@ CREATE TABLE """ + iotTableName + """
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + self.iotTableName + """
 (""" + (', '.join(cls)) + ", CONSTRAINT """ + self.iotTableName + "_PK PRIMARY KEY("+ self.index + """))
-    ORGANIZATION INDEX""" + self.getTableSpaceString(self.tableSpaceIOT) + """
+    ORGANIZATION INDEX""" + ora.getTableSpaceString(self.tableSpaceIOT) + """
     PCTFREE 0 NOLOGGING
-    """ + self.getParallelStringCTAS(self.numProcesses) + """
+    """ + ora.getParallelString(self.numProcesses) + """
     AS
         SELECT """ + (', '.join(self.heapCols())) + """ FROM """ + self.tableName + """
         UNION ALL
@@ -156,14 +156,7 @@ CREATE TABLE """ + self.iotTableName + """
         """
         Gather optimiser statistics.
         """
-        ora.mogrifyExecute(cursor, "ANALYZE TABLE " + self.iotTableName + \
-        "  compute system statistics for table")
-     
-        ora.mogrifyExecute(cursor,"""
-BEGIN
-    dbms_stats.gather_table_stats('""" + self.user + """','""" + self.iotTableName + \
-    """',NULL,NULL,FALSE,'FOR ALL COLUMNS SIZE AUTO',8,'ALL');
-END;""")
+        ora.computeStatistics(cursor, self.iotTableName, self.user)
 
 
     def extLoaderPrep(self, connection, configuration):
@@ -235,12 +228,7 @@ END;""")
         """
         connection = self.getConnection()
         cursor = connection.cursor()
-        size_total = ora.getSizeTable(cursor, self.iotTableName)    
+        size_total = ora.getSizeTable(cursor, self.iotTableName + '_pk')    
         number_total = ora.getNumPoints(connection, cursor, self.iotTableName)
         connection.close()
         return size_total, number_total
-        
-    def getParallelStringCTAS(self, numProcesses):
-        if numProcesses > 1:
-            return 'PARALLEL ' + str(numProcesses)
-        return ''

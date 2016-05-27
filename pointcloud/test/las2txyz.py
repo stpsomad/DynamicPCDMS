@@ -6,17 +6,21 @@ Created on Thu May 19 08:50:37 2016
 """
 
 import pointcloud.reader as reader
-from pointcloud.Validator import Validate
-from pointcloud.general import getFiles
+from pointcloud.test.Validator import Validate
+from pointcloud.general import getFiles, SRID
 import numpy as np
 import sys
+import time
 
 def load(ini):
     initialise = Validate(ini)
     files = getFiles(initialise.directory, ['laz'], True)
     files.sort()
     
+    counter = 0 
+    
     for cfile in files:
+        start = time.time()
         f = reader.readFileLaspy(cfile)
         t = parseTimeFromFilename(cfile, initialise.dataset)
         charar = np.chararray(len(f), itemsize=10)
@@ -24,9 +28,15 @@ def load(ini):
         gtype = np.empty(len(f)).transpose()
         gtype.fill(3001)
         srid = np.empty(len(f)).transpose()
-        srid.fill(28992)
+        srid.fill(SRID)
         data = np.vstack((charar, gtype, srid, f.x, f.y, f.z)).transpose()
+        counter += (time.time() - start)
         print format(data)
+        
+        fl = open('validate_prep.txt', 'a')
+        fl.write(str(counter))
+        fl.write(str('\n'))
+        fl.close()
 
 def format(lst):
     return '\n'.join([','.join(map(str,i)) for i in lst])
