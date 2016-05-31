@@ -14,10 +14,24 @@ import time
 
 def load(ini):
     initialise = Validate(ini)
-    files = getFiles(initialise.directory, ['laz'], True)
+    
+    # fresh reload or not
+    directories = []
+    if initialise.reload is True:
+        i = int(initialise.ORCLdirectory[-1])
+        while i >= 1:
+            directories.append(initialise.directory[:-2] + str(i))
+            i -= 1
+        directories.sort()
+    else:
+        directories = initialise.directory
+    
+
+    # get the name of the laz files in the directories
+    files = getFiles(directories, ['laz'], True)
     files.sort()
     
-    counter = 0 
+    counter = 0 # for timing the morton conversion - workaround
     
     for cfile in files:
         start = time.time()
@@ -33,10 +47,11 @@ def load(ini):
         counter += (time.time() - start)
         print format(data)
         
-        fl = open('validate_prep.txt', 'a')
-        fl.write(str(counter))
-        fl.write(str('\n'))
-        fl.close()
+    #work-around
+    fl = open('validate_prep.txt', 'a')
+    fl.write(str(counter))
+    fl.write(str('\n'))
+    fl.close()
 
 def format(lst):
     return '\n'.join([','.join(map(str,i)) for i in lst])
