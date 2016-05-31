@@ -76,38 +76,41 @@ def getFiles(inputElement, extensions = PC_FILE_FORMATS, recursive = False):
     If inputElement is directly a file it returns a list with only one element, 
     the given file.
     To search the subfolders use recursive = True
-    Source: https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud/utils.py
+    Adapted from: https://github.com/NLeSC/pointcloud-benchmark/blob/master/python/pointcloud/utils.py
     
     Apache License
     Version 2.0, January 2004"""
 
     if type(extensions) == str:
         extensions = [extensions,]
+    if type(inputElement) == str:
+        inputElement = [inputElement,]
+        
+    absPaths=[]
 
-    inputElementAbsPath = os.path.abspath(inputElement)
-    if os.path.isdir(inputElementAbsPath):
-        elements = sorted(os.listdir(inputElementAbsPath), key=str.lower)
-        absPaths=[]
-        for element in elements:
-            elementAbsPath = os.path.join(inputElementAbsPath,element) 
-            if os.path.isdir(elementAbsPath):
-                if recursive:
-                    absPaths.extend(getFiles(elementAbsPath, extensions))
-            else: 
-                isValid = False
-                for extension in extensions:
-                    if elementAbsPath.endswith(extension):
-                        isValid = True
-                if isValid:
-                    absPaths.append(elementAbsPath)
-        return absPaths
-    elif os.path.isfile(inputElementAbsPath):
-        isValid = False
-        for extension in extensions:
-            if inputElementAbsPath.endswith(extension):
-                isValid = True
-        if isValid:
-            return [inputElementAbsPath,]
-    else:
-        raise Exception("ERROR: inputElement is neither a valid folder nor file")
-    return []
+    for directory in inputElement:
+        inputElementAbsPath = os.path.abspath(directory)
+        if os.path.isdir(inputElementAbsPath):
+            elements = sorted(os.listdir(inputElementAbsPath), key=str.lower)
+            for element in elements:
+                elementAbsPath = os.path.join(inputElementAbsPath,element) 
+                if os.path.isdir(elementAbsPath):
+                    if recursive:
+                        absPaths.extend(getFiles(elementAbsPath, extensions))
+                else: 
+                    isValid = False
+                    for extension in extensions:
+                        if elementAbsPath.endswith(extension):
+                            isValid = True
+                    if isValid:
+                        absPaths.append(elementAbsPath)
+        elif os.path.isfile(inputElementAbsPath):
+            isValid = False
+            for extension in extensions:
+                if inputElementAbsPath.endswith(extension):
+                    isValid = True
+            if isValid:
+                absPaths = [inputElementAbsPath,]
+        else:
+            raise Exception("ERROR: inputElement is neither a valid folder nor file")
+    return absPaths

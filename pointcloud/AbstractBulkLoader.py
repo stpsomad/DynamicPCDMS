@@ -26,6 +26,8 @@ class BulkLoader(Loader):
         1. The data are read from the LAZ files and converted to the Morton codes.
         2. The data are dumped into a heap table.
         """
+        if self.reload:
+            self.reloadPrep()
         connection = self.getConnection()
         if self.loader == 'external':
             self.extLoaderPrep(connection, self.configFile)

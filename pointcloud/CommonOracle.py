@@ -40,6 +40,7 @@ class Oracle:
         self.update = config.get('benchmark-options', 'update') #dump, union, resort
         self.scale = config.getint('benchmark-options', 'scale')
         self.granularity = config.get('benchmark-options', 'granularity') #day, year
+        self.reload = config.getboolean('benchmark-options', 'reload') #true, false
         
         if self.integration not in ['deep', 'loose']:
             raise Exception('ERROR: Not supported data structure')

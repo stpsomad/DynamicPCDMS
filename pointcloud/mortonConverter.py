@@ -39,8 +39,23 @@ def mortonXYZTdeep(f, t, offx, offy, offz, scalex, scaley, scalez):
 def converter(ini_file):
     initialise = Oracle(ini_file)
     connection = initialise.getConnection()
-    files = getFiles(initialise.directory, ['laz'], True)
+    
+    # fresh reload or not
+    directories = []
+    if initialise.reload is True:
+        initialise.init = True
+        i = int(initialise.ORCLdirectory[-1])
+        while i >= 1:
+            directories.append(initialise.directory[:-2] + str(i))
+            i -= 1
+        directories.sort()
+    else:
+        directories = initialise.directory    
+    
+    # get the name of the laz files in the directories
+    files = getFiles(directories, ['laz'], True)
     files.sort()
+    
     cursor = connection.cursor()
     
     if initialise.dataset.lower() == 'zandmotor':
@@ -67,7 +82,7 @@ def converter(ini_file):
     
     index = True
     init = initialise.init
-    counter = 0
+    counter = 0 # for timing the morton conversion - workaround
     for cfile in files:
         start = time.time()
         f = reader.readFileLaspy(cfile)
@@ -94,7 +109,7 @@ def converter(ini_file):
             fh.write(a)
             fh.close()
             
-    #ugly workaround, how else?
+    #work-around
     f = open('morton_{0}.txt'.format(initialise.iotTableName), 'a')
     f.write(str(counter))
     f.write(str('\n'))

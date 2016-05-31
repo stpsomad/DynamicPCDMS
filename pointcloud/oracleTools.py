@@ -21,6 +21,21 @@ try:
 except ImportError:
 	print "cx_Oracle module cannot be found"
 	raise
+ 
+def getConnectString(user, password, host, port, database):
+    """
+    Gets a connection string to establish a database connection.
+    """
+    return user + "/" + password + "@//" + host + ":" + port + "/" + database
+
+def getConnection(user, password, host, port, database):
+    """
+    Establishes connection to an Oracle database.
+    """
+    try:
+        return cx_Oracle.connect(getConnectString(user, password, host, port, database))
+    except:
+        print "Connection could not be established"
 
 def createUser(cursorSuper, userName, password, tableSpace, tempTableSpace):
     """
@@ -417,3 +432,73 @@ def getSelectStatement(table, columns = '*', hints =''):
     Generates a SELECT ... statement.
     """
     return "SELECT " + hints + ' ' + columns + " FROM " + table
+    
+def getAlias(column, alias = ''):
+    """
+    Composes an alias for the column specified. 
+    """
+    if alias:
+        return column + ' AS ' + alias
+    return column
+    
+def getSelectColumns(columns):
+    """
+    Prepare the columns to be selected by the SELECT statement.
+    """
+    if columns == '*':
+        return columns
+    else:
+        return ', '.join(columns)
+
+def composeDIM_ELEMENT(dimension_name, SDO_LB, SDO_UB, tolerance):
+    """
+    Composes the DIMINFO column of the USER_SDO_GEOM_METADATA table.
+    
+    Args:
+        dimension_name (string) : the name of the dimension,
+        SDO_LB (float) : the lower bound of the dimension specified,
+        SDO_UB (float) : the upper bound of the dimension specified,
+        tolerance (float) : the tolerance of the dimension
+    """
+    return """SDO_DIM_ELEMENT
+(
+'{0}',
+{1},
+{2},
+{3}
+)""".format(dimension_name.upper(), SDO_LB, SDO_UB, tolerance)
+
+def updateSpatialMeta(connection, table_name, column_name, dimension_names, SDO_LBs, SDO_UBs, tolerances, srid):
+    """
+    Update the USER_SDO_GEOM_METADATA view. This is required before the Spatial index can be created.
+    
+    Args:
+        connection : an Oracle connection,
+        table_name (string) : the name of a feature table,
+        column_name (string) : the name of the column of type SDO_GEOMETRY,
+        dimension_names (list) : the list of names of the dimensions for which the metadata
+                                    are updated. e.g. ['X', 'Y', 'Z'],
+        SDO_LBs (list) : the lower bounds of the dimensions e.g. [-100, -1000, 10],
+        SDO_UBs (list) : the upper bounds of the dimensions e.g. [100, 1000, 100],
+        tolerances (list) : the tolerances of the dimensions e.g. [0.001, 0.001, 0.001]
+        srid (int) : the Spatial Reference System Identifier used
+    """
+    cursor = connection.cursor()
+    
+    diminfo = """,
+""".join([composeDIM_ELEMENT(dimension_names[i], SDO_LBs[i], SDO_UBs[i], tolerances[i]) for i in range(len(dimension_names))])
+    
+    mogrifyExecute(cursor, """
+INSERT INTO user_sdo_geom_metadata
+(table_name, column_name, srid, diminfo)
+VALUES
+(
+'""" + table_name.upper() + """',
+'""" + column_name.upper() + """',
+""" + str(srid) + """,
+SDO_DIM_ARRAY
+(
+""" + diminfo + """
+)
+)""")
+    connection.commit()

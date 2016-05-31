@@ -404,7 +404,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
             if self.granularity == 'day':
                 query =  ora.getCTASStatement(queryTab, ora.getTableSpaceString(self.tableSpace)) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z',
-self.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
+ora.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
             else:
                 query = ora.getCTASStatement(queryTab, ora.getTableSpaceString(self.tableSpace)) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere) + ')'
@@ -635,41 +635,17 @@ fields terminated by ','
         ctfile.close()
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
         return sqlLoaderCommand
-        
-#    def getHintStatement(self, hints):
-#        """
-#        Composes the SQL statement for using optimizer hints.
-#        """
-#        if hints == ['']:
-#            return ''
-#        return ' /*+ ' + ' '.join(hints) + ' */ '
-        
+              
     def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition):
         """
         Composes the Point In Polygon SQL statement.
         """
-        return 'SELECT ' + ora.getHintStatement(ora.getParallelStringQuery(self.numProcesses)) + self.getSelectColumns('*') + """ 
+        return 'SELECT ' + ora.getHintStatement(ora.getParallelStringQuery(self.numProcesses)) + ora.getSelectColumns('*') + """ 
 FROM TABLE(mdsys.sdo_PointInPolygon(CURSOR(
-""" + ora.getSelectStatement(approxTable, self.getSelectColumns(columnsPIP)) + """), 
+""" + ora.getSelectStatement(approxTable, ora.getSelectColumns(columnsPIP)) + """), 
 MDSYS.SDO_GEOMETRY('""" + self.wkt + """', """ + str(self.srid) + """), """ + str(self.tolerance) +"""))
 """ + condition
-     
-    def getAlias(self, column, alias = ''):
-        """
-        Composes an alias for the column specified. 
-        """
-        if alias:
-            return column + ' AS ' + alias
-        return column
-        
-    def getSelectColumns(self, columns):
-        """
-        Prepare the columns to be selected by the SELECT statement.
-        """
-        if columns == '*':
-            return columns
-        else:
-            return ', '.join(columns)
+
 
 def getTime(granularity, start, end):
     if start == None and end == None:

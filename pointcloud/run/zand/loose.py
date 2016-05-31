@@ -81,8 +81,7 @@ for integr in integrations:
                     lst.insert(0, num)
                     queries.append(lst)
                     ora.dropTable(cursor, querier.queryTable + '_' +  str(num))               
-                if querier.integration == 'deep':
-                    ora.dropTable(cursor, querier.rangeTable + str(num))
+
             print
             print tabulate(queries, hquery, tablefmt="plain")
 

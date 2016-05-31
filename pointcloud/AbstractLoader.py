@@ -64,7 +64,8 @@ class Loader(Oracle):
             column = self.cols[i]
             if column not in general.DM_SQLLDR:
                 raise Exception('Wrong column! ' + column)
-            sqlldrCols.append(self.getDBColumn(i)[0] + ' ' + general.DM_SQLLDR[column][0] + ' external(' + str(general.DM_SQLLDR[column][1]) + ')')
+#            sqlldrCols.append(self.getDBColumn(i)[0] + ' ' + general.DM_SQLLDR[column][0] + ' external(' + str(general.DM_SQLLDR[column][1]) + ')')
+            sqlldrCols.append(self.getDBColumn(i)[0] + ' ' + general.DM_SQLLDR[column][0] + ' external')
         
         ctfile.write("""load data
 append into table """ + tableName + """
@@ -165,7 +166,7 @@ CREATE TABLE """ + self.iotTableName + """
         """
         cursor = connection.cursor()
 
-        if self.init:
+        if self.init or self.reload:
             ora.createMetaTable(cursor, self.metaTable, True)
 
         command = """python -m pointcloud.mortonConverter {0}""".format(configuration)
@@ -177,7 +178,7 @@ CREATE TABLE """ + self.iotTableName + """
         Load the data using External Tables.
         """
         cursor = connection.cursor()
-        if self.init:
+        if self.init or self.reload:
             self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
         else:
             ora.appendData(connection, cursor, self.iotTableName, self.tableName)
@@ -190,7 +191,7 @@ CREATE TABLE """ + self.iotTableName + """
         cursor = connection.cursor()
         
         self.createFlatTable(cursor, self.tableName, self.tableSpaceHeap)
-        if self.init:
+        if self.init or self.reload:
             ora.createMetaTable(cursor, self.metaTable, True)
 
         commnandsqlldr = self.sqlldr(self.tableName)
@@ -202,7 +203,7 @@ CREATE TABLE """ + self.iotTableName + """
         Create the IOT or update according to the specified update method (dump, 
         union, resort)"""
         cursor = connection.cursor()
-        if self.init:
+        if self.init or self.reload:
             self.createIOTTable(cursor, self.iotTableName, self.tableName, self.tableSpaceIOT, self.numProcesses)
         else:
             if self.update == 'dump':
@@ -232,3 +233,18 @@ CREATE TABLE """ + self.iotTableName + """
         number_total = ora.getNumPoints(connection, cursor, self.iotTableName)
         connection.close()
         return size_total, number_total
+        
+    def reloadPrep(self):
+        connection = self.getConnection()
+        cursor = connection.cursor()
+        
+        cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[(self.iotTableName).upper(),])
+        length = len(cursor.fetchall())
+        if length:
+            cursor.execute('DROP TABLE {0} PURGE'.format((self.iotTableName).upper()))
+        
+        cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[(self.metaTable).upper(),])
+        length = len(cursor.fetchall())
+        if length:
+            cursor.execute('DROP TABLE {0} PURGE'.format((self.metaTable).upper()))
+         
