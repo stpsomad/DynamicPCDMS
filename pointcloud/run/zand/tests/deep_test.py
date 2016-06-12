@@ -14,16 +14,16 @@ import os
 
 ###########################
 dataset = 'zandmotor'
-integrations = ['dxyt', 'dxyzt']
+integrations = ['dxyt']
 scaling = '10000'
-repeatQueries = 6
-parallels = [0, 8]
-fresh_reloads = [True, False]
-maxRanges = [200, 1000000]
+repeatQueries = 1
+parallels = [8]
+fresh_reloads = [False]
+maxRanges = [None, 1000000]
 ###########################
 
 if dataset == 'zandmotor':
-    bench = 3
+    bench = 2
 elif dataset == 'coastline':
     bench = 4
     

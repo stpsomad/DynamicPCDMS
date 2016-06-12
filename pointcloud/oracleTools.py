@@ -277,6 +277,7 @@ def createTable(cursor, name, columns, check = False):
     Creates a table.
     """
     dropTable(cursor, name, check)
+
     cursor.execute("""CREATE TABLE {0} ({1})""".format(name, ','.join(columns)))
     
 def appendData(connection, cursor, iotTableName, tableName):
@@ -292,12 +293,14 @@ def renameTable(cursor, oldName, newName):
     """
     Rename the specified table.
     """
+
     cursor.execute("""RENAME {0} to {1}""".format(oldName, newName))
     
 def renameConstraint(cursor, table, oldConstraintName, newConstraintName):
     """
     Rename a constaint of the specified table.
     """
+    
     cursor.execute("""ALTER TABLE {0}
 RENAME CONSTRAINT {1} TO {2}""".format(table, oldConstraintName, newConstraintName))
 
@@ -305,6 +308,7 @@ def renameIndex(cursor, oldIndexName, newIndexName):
     """
     Rename the specified index.
     """
+    
     cursor.execute("""ALTER INDEX {0} RENAME TO {1}""".format(oldIndexName, newIndexName))
     
 def getSizeTable(cursor, tableName):
@@ -323,6 +327,7 @@ def getSizeTable(cursor, tableName):
             queryArgs[name] = tableName[i]
             segs.append('segment_name = :' + name)
             tabs.append('table_name = :' + name)
+        
         
         cursor.execute("""
 SELECT sum(bytes/1024/1024) size_in_MB FROM user_segments
@@ -361,6 +366,7 @@ select blocks * 0.0078125 into size_in_mb from USER_TABLES where table_name = id
 dbms_output.put_line (to_char(size_in_mb));
 END;
     """
+        
         cursor.execute(q, [tableName,])
         statusVar = cursor.var(cx_Oracle.NUMBER)
         lineVar = cursor.var(cx_Oracle.STRING)
@@ -373,6 +379,7 @@ def computeStatistics(cursor, tableName, user):
     """
     Gather optimiser statistics.
     """
+    
     mogrifyExecute(cursor, "ANALYZE TABLE " + tableName + \
     "  compute system statistics for table")
  
@@ -403,6 +410,8 @@ def getHintStatement(hints):
     """
     if hints == ['']:
         return ''
+    if isinstance(hints, str):
+        hints = [hints]
     return ' /*+ ' + ' '.join(hints) + ' */ '
     
 def getTableSpaceString(tableSpace):
@@ -485,9 +494,11 @@ def updateSpatialMeta(connection, table_name, column_name, dimension_names, SDO_
     """
     cursor = connection.cursor()
     
+    
+    
     diminfo = """,
 """.join([composeDIM_ELEMENT(dimension_names[i], SDO_LBs[i], SDO_UBs[i], tolerances[i]) for i in range(len(dimension_names))])
-    
+      
     mogrifyExecute(cursor, """
 INSERT INTO user_sdo_geom_metadata
 (table_name, column_name, srid, diminfo)

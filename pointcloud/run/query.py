@@ -16,7 +16,7 @@ import pointcloud.oracleTools as ora
 ###########################
 dataset = 'zandmotor'
 case = 'lxyt_1_part1'
-repeat = 2
+repeat = 1
 ###########################
 
 hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
@@ -45,9 +45,7 @@ for num in querier.ids:
         queries.append(lst)
         ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
         print tabulate([lst], hquery, tablefmt="plain")
-
-for num in querier.ids:
-    if querier.integration == 'deep':
-        ora.dropTable(cursor, querier.rangeTable + str(num))
+#    if querier.integration == 'deep':
+#        ora.dropTable(cursor, querier.rangeTable + str(num))
 print
 print tabulate(queries, hquery, tablefmt="plain")

@@ -77,6 +77,9 @@ class Octree:
           
         codes = []
         c = 0
+        
+        fh = open('test.txt', 'a')
+        
         for octIndex in range(8):
             octan = octans[octIndex]
             relation = self._relation(region, Cube(Point3D(*octan[:3]), Point3D(*octan[3:])))
@@ -84,16 +87,19 @@ class Octree:
             if relation: #1 or 2
                 octCode = (parentCode << 3) + octIndex
                 if parentLevel == maxDepth:
+                        fh.write('{0},{1},{2}\n{3},{4},{5}\n'.format(octan[0], octan[1], octan[2], octan[3], octan[4], octan[5]))
                         codes.append((octCode, level, relation == 1, self.octCodeToMortonRange(octCode, level))) # relation = 1 indicates that this morton range is fully within query region
                         c += 1
                 else:
                     (tcodes, tc) = self._overlapCodes(maxDepth, level, octCode, region, *octan)
                     if tc == 8:
+                        fh.write('{0},{1},{2}\n{3},{4},{5}\n'.format(octan[0], octan[1], octan[2], octan[3], octan[4], octan[5]))
                         codes.append((octCode, level, False, self.octCodeToMortonRange(octCode, level)))
                         c += 1
                     else:
+                        fh.write('{0},{1},{2}\n{3},{4},{5}\n'.format(octan[0], octan[1], octan[2], octan[3], octan[4], octan[5]))
                         codes.extend(tcodes)
-                        
+        fh.close()   
         return (codes,c)
     
     def octCodeToMortonRange(self, octCode, level):

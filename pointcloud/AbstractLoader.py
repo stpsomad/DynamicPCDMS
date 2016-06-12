@@ -66,6 +66,7 @@ class Loader(Oracle):
                 raise Exception('Wrong column! ' + column)
 #            sqlldrCols.append(self.getDBColumn(i)[0] + ' ' + general.DM_SQLLDR[column][0] + ' external(' + str(general.DM_SQLLDR[column][1]) + ')')
             sqlldrCols.append(self.getDBColumn(i)[0] + ' ' + general.DM_SQLLDR[column][0] + ' external')
+            
         
         ctfile.write("""load data
 append into table """ + tableName + """
@@ -76,6 +77,7 @@ fields terminated by ','
         
         ctfile.close()
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' data=\\"-\\" bad=' + badFile + " log=" + logFile
+
         return sqlLoaderCommand
         
 
@@ -84,7 +86,7 @@ fields terminated by ','
         Creates a empty flat table
         """
         ora.dropTable(cursor, tableName, True)
-        
+
         ora.mogrifyExecute(cursor,"""
 CREATE TABLE """ + tableName + """ (
 """ + (',\n'.join(self.getHeapColumns())) + """) 
@@ -96,6 +98,7 @@ pctfree 0 nologging""")
         Creates an external table by accecssing the files in the specified directory.        
         """
         ora.dropTable(cursor, tableName, True)
+        
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + tableName + """ (""" + (',\n'.join(self.getHeapColumns())) + """)
 ORGANIZATION EXTERNAL
@@ -116,7 +119,7 @@ LOCATION ('""" + txtFiles + """')
         ora.dropTable(cursor, iotTableName, True)
         
         cls = [', '.join(i[0] for i in self.columns)]
-          
+                 
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + iotTableName + """
 (""" + (', '.join(cls)) + """, 
@@ -139,7 +142,7 @@ CREATE TABLE """ + iotTableName + """
         ora.renameIndex(cursor, self.iotTableName + '_PK', temp_iot + '_PK')
         
         cls = [', '.join(i[0] for i in self.columns)]
-       
+              
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + self.iotTableName + """
 (""" + (', '.join(cls)) + ", CONSTRAINT """ + self.iotTableName + "_PK PRIMARY KEY("+ self.index + """))
@@ -196,6 +199,7 @@ CREATE TABLE """ + self.iotTableName + """
 
         commnandsqlldr = self.sqlldr(self.tableName)
         command = """python -m pointcloud.mortonConverter {0} | """.format(configuration) + commnandsqlldr
+        
         os.system(command)
         
     def sqlldrLoading(self, connection):

@@ -27,6 +27,9 @@ if dataset == 'zandmotor':
     bench = 3
 elif dataset == 'coastline':
     bench = 4
+    
+hloading = ['approach','load[s]', 'rtree[s]', 'btree[s]', 'table[MB]', 'Btree[MB]', 'Rtree[MB]', 'total[MB]', 'points']
+hquery = ['id', 'fetch_time[s]', 'points', 'filtering_pts']
 
 fh = open('validation_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
 fh.write('Benchmark executed on \n')
@@ -45,7 +48,6 @@ for dim in dims:
     for parallel in parallels:
         for fresh_reload in fresh_reloads:
             loading, queries = [], []
-            print parallel, dim, fresh_reload
             for benchmark in range(1, bench + 1):
                 configuration = path + '/ini/' + dataset + '/validation_part{0}.ini'.format(benchmark)
                 validate = Validate(configuration)
@@ -87,7 +89,18 @@ for dim in dims:
                         
                         querier.dropQueryTable(cursor, query) #drop the table
                 
-            cursor.execute('DROP TABLE {0} PURGE'.format((validate.spatialTable).upper()))
+            #cursor.execute('DROP TABLE {0} PURGE'.format((validate.spatialTable).upper()))
+            
+            # print stats
+            print """\n\n
+---Case----
+parallel: {0}
+dimensions indexed: {1}
+fresh reload: {2}\n\n""". format(parallel, dim, fresh_reload)
+            fh.write('\n---LOADING---\n')
+            print tabulate(loading, hloading, tablefmt="plain")
+            fh.write('\n---QUERYING---\n')
+            print tabulate(queries, hquery, tablefmt="plain")
             
             #write in file
             fh.write("""\n\n
@@ -96,11 +109,10 @@ parallel: {0}
 dimensions indexed: {1}
 fresh reload: {2}\n\n""". format(parallel, dim, fresh_reload))
             
-            # print stats    
-            hloading = ['approach','load[s]', 'rtree[s]', 'btree[s]', 'table[MB]', 'Btree[MB]', 'Rtree[MB]', 'total[MB]', 'points']
             fh.write(tabulate(loading, hloading, tablefmt="plain"))
             fh.write('\n')
-            hquery = ['id', 'fetch_time[s]', 'points', 'filtering_pts']
             fh.write(tabulate(queries, hquery, tablefmt="plain"))
             fh.write('\n')
             fh.write('\n')
+            
+fh.close()

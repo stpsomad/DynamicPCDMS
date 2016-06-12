@@ -14,12 +14,11 @@ import os
 
 ###########################
 dataset = 'zandmotor'
-integrations = ['dxyt', 'dxyzt']
-scaling = '10000'
-repeatQueries = 6
-parallels = [0, 8]
-fresh_reloads = [True, False]
-maxRanges = [200, 1000000]
+integrations = ['lxyt']
+scaling = '1'
+repeatQueries = 1
+parallels = [8]
+fresh_reloads = [False]
 ###########################
 
 if dataset == 'zandmotor':
@@ -27,42 +26,44 @@ if dataset == 'zandmotor':
 elif dataset == 'coastline':
     bench = 4
     
-path = os.getcwd()
-benchmark = ['mini', 'medium', 'full']  
-hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
-hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
-
-fh = open('integrated_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
+fh = open('non-integrated_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
 fh.write('Benchmark executed on \n')
 fh.write(time.strftime("%d/%m/%Y"))
 fh.write('\n')
 fh.write(
-"""CASE: Integrated approach (deep) with scale of 10,000
+"""CASE: Non - integrated approach (loose) with scale of 1
 
 Different approaches examined are:
     * z as an aatribute and as part of the morton key
     * parallel execution of 8 and no parallel
     * fresh reload of the datasets and not
-    * querying with max_Ranges 200 (for comparison) and 1,000,000
 
 The queries are repeated 6 times
 
---START--\n\n\n""")
+--START--
+""")
 
+path = os.getcwd()
+benchmark = ['mini', 'medium', 'full']  
+hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
+hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
 
-for fresh_reload in fresh_reloads:
-    for parallel in parallels:
-        for integr in integrations:
+for integr in integrations:
+    for fresh_reload in fresh_reloads:
+        for parallel in parallels:
             loadings = []
             queries = []
             for i in range(1,bench + 1):
-            
                 #================================================================
                 #                 Loading Phase
                 #================================================================
                 configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_part' + str(i) + '.ini'
-    
+                
+                # configuring the parameters
                 bulk = BulkLoader(configuration)
+                bulk.reload = fresh_reload
+                bulk.numProcesses = parallel
+                
                 loading = []
                 loading.append(benchmark[i - 1])
                           
@@ -87,46 +88,38 @@ for fresh_reload in fresh_reloads:
                 #================================================================
                 #                 Querying Phase
                 #================================================================
-            
                 querier = Querier(configuration)
-                connection = querier.getConnection()
-                cursor = connection.cursor()
+                querier.numProcesses = parallel
                 
+                connection = bulk.getConnection()
+                cursor = connection.cursor()
                 cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[querier.queriesTable.upper(),])
                 length = len(cursor.fetchall())
                 if not length:
                     os.system('python -m pointcloud.queryTab {0}'.format(configuration))
-                
-                for maxRange in maxRanges:
-                    querier.maxRanges = maxRange
-                    sublist = []
-                    for num in querier.ids:
-                        for j in range(repeatQueries):
-                            start = time.time()
-                            lst = querier.query(num)
-                            lst.append(round(time.time() - start, 2))
-                            lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
-                            lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
-                            lst.insert(0, num)
-                            sublist.append(lst)
-                            ora.dropTable(cursor, querier.queryTable + '_' +  str(num))               
-                        ora.dropTable(cursor, querier.rangeTable + str(num))
-                    queries.append(sublist)
-                
+    
+                for num in querier.ids:
+                    for j in range(repeatQueries):
+                        start = time.time()
+                        lst = querier.query(num)
+                        lst.append(round(time.time() - start, 2))
+                        lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
+                        lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
+                        lst.insert(0, num)
+                        queries.append(lst)
+                        ora.dropTable(cursor, querier.queryTable + '_' +  str(num))               
+            print
+            print 'integration: {0}\nreload:{1}\nparallel:{2}'.format(integr, fresh_reload, parallel)
             print
             print tabulate(loadings, hloading, tablefmt="plain")
-            for i in range(len(maxRanges)):
-                print
-                print 'maximum ranges: {0}'.format(maxRanges[i])
-                print tabulate(queries[i], hquery, tablefmt="plain")
+            print
+            print tabulate(queries, hquery, tablefmt="plain")
 
-            fh.write('integration: {0}\nreload:{1}\nparallel:{2}\n\n'.format(integr, fresh_reload, parallel))
-            fh.write('\n---LOADING---\n')
+            fh.write('integration: {0}\nreload:{1}\nparallel:{2}'.format(integr, fresh_reload, parallel))
+            fh.write('\n---LOADING---')
             fh.write(tabulate(loadings, hloading, tablefmt="plain"))
-            fh.write('\n---QUERYING---\n')
-            for i in range(len(maxRanges)):
-                fh.write('maximum ranges: {0}'.format(maxRanges[i]))
-                fh.write(tabulate(queries[i], hquery, tablefmt="plain"))
-                fh.write('\n')
-                fh.write('\n')
+            fh.write('\n---QUERYING---')
+            fh.write(tabulate(queries, hquery, tablefmt="plain"))
+            fh.write('\n')
+            fh.write('\n')
 fh.close()

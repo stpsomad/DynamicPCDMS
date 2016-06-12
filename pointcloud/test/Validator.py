@@ -69,7 +69,7 @@ class Validate:
         controlFile = tableName + '.ctl'
         badFile = tableName + '.bad'
         logFile = tableName + '.log'
-        
+
         ctfile = open(controlFile,'w')
         ctfile.write("""load data
 append into table """ + tableName + """
@@ -97,6 +97,7 @@ Z FLOAT EXTERNAL
         return sqlLoaderCommand
         
     def createSpatialTable(self, cursor, tableName, tableSpaceTable):
+
         ora.mogrifyExecute(cursor, """
 CREATE TABLE """ + tableName + """
 (
@@ -117,12 +118,6 @@ ADD CONSTRAINT ID_PK PRIMARY KEY (ID)
             dims = "sdo_indx_dims=" + str(dim)
         indx_parameters = "PARAMETERS('" + dims + " tablespace=" + tablespace + " layer_gtype=POINT')"
         
-        print """
-CREATE INDEX """ + indexName + " ON " + tableName + """(GEOM)
-INDEXTYPE IS MDSYS.SPATIAL_INDEX
-""" + indx_parameters + """
-""" + ora.getParallelString(numProcesses)
-        
         ora.mogrifyExecute(cursor, """
 CREATE INDEX """ + indexName + " ON " + tableName + """(GEOM)
 INDEXTYPE IS MDSYS.SPATIAL_INDEX
@@ -133,14 +128,10 @@ INDEXTYPE IS MDSYS.SPATIAL_INDEX
 #        ora.mogrifyExecute(cursor, """ALTER INDEX """ + tableName + "_idx REBUILD" + ora.getParallelString(numProcesses))
         
     def dropSpatialIndex(self, cursor, tableName):
+
         ora.mogrifyExecute(cursor, "DROP INDEX " + tableName + "_idx")
     
     def createIndex(self, cursor, tableName, indexName, tableSpace, numProcesses):
-        print """
-CREATE INDEX """ + indexName + ' ON ' + tableName  + """(TIME)
-""" + ora.getTableSpaceString(tableSpace) + """ 
-""" + ora.getParallelString(numProcesses)
-
         ora.mogrifyExecute(cursor, """
 CREATE INDEX """ + indexName + ' ON ' + tableName  + """(TIME)
 """ + ora.getTableSpaceString(tableSpace) + """ 
@@ -179,6 +170,7 @@ WHERE TABLE_NAME = '""" + self.spatialTable + "'")
 
         sqlldr = self.sqlldrSpatial(self.spatialTable)
         command = """python -m pointcloud.test.las2txyz {0} | """.format(self.configFile) + sqlldr
+        
         os.system(command)
         time1 = round(time.time() - start, 4)
 

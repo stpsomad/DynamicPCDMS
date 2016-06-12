@@ -75,6 +75,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         #         using the SDO_FILTER Operator
         #========================================================================
         filtering = self.composeQuery(qid, 'SDO_FILTER', qtype, timeType, True)
+
         cursor.execute(filtering)
         filtering_pts = cursor.fetchall()[0][0]
         

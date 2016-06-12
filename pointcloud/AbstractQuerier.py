@@ -34,10 +34,7 @@ class Querier(Oracle):
         self.numProcesses = config.getint('Querier', 'numProcesses')
         self.tableSpace = config.get('Querier', 'tableSpace')
 
-        if self.method == 'sql':
-            self.maxRanges = config.getint('Querier', 'maxRanges')
-        else:
-            self.maxRanges = None
+        self.maxRanges = config.getint('Querier', 'maxRanges')
         
         self.ids = config.get('Querier', 'id').replace(' ', '').split(',')
         self.numBits = config.getint('Querier', 'numBits')       
@@ -51,20 +48,21 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
          self.offx, self.offy, self.offz) = cursor.fetchone()
         connection.close()
         self.roundNum = len(str(self.scalex)) - 2
-                
+        
+        self.numLevels = 'auto'
         if self.integration.lower() == 'loose':
             if self.parse.lower() == 'xyt':
                 self.domain = (0, 0, int((self.maxx - self.offx)/self.scalex),
                                int((self.maxy - self.offy)/self.scaley))
                                
-                self.structure = QuadTree.QuadTree(self.domain, 'auto', self.numBits)
+                self.structure = QuadTree.QuadTree(self.domain, self.numLevels, self.numBits)
                 self.case = 1
             elif self.parse.lower() == 'xyzt':
                 self.domain = (0, 0, 0, int((self.maxx - self.offx)/self.scalex),
                                int((self.maxy - self.offy)/self.scaley), 
                                 int((self.maxz - self.offz)/self.scalez))
                                 
-                self.structure = Octree.Octree(self.domain, 'auto', self.numBits)
+                self.structure = Octree.Octree(self.domain, self.numLevels, self.numBits)
                 self.case = 2
         elif self.integration.lower() == 'deep':
             if self.parse.lower() == 'xyt':
@@ -72,7 +70,7 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
                                int((self.maxx - self.offx)/self.scalex), 
                                 int((self.maxy - self.offy)/self.scaley))
                                 
-                self.structure = dynamicOctree.dynamicOctree(self.domain, 'auto', self.numBits)
+                self.structure = dynamicOctree.dynamicOctree(self.domain, self.numLevels, self.numBits)
                 self.case = 3
             elif self.parse.lower() == 'xyzt':
                 self.domain = (0, 0, 0, 0, int(self.maxt * self.scale), 
@@ -80,7 +78,7 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
                                 int((self.maxy - self.offy)/self.scaley), 
                                 int((self.maxz - self.offz)/self.scalez))
                                 
-                self.structure = HexadecTree.HexadecTree(self.domain, 'auto', self.numBits)
+                self.structure = HexadecTree.HexadecTree(self.domain, self.numLevels, self.numBits)
                 self.case = 4
                 
         self.queryTable = self.iotTableName + "_res"
@@ -89,6 +87,7 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
         self.queryTableColumns = ['id', 'dataset', 'type', 'geometry', 'time', 'time_type', 'z']
         self.joinColumns = ['low NUMBER', 'upper NUMBER']
         self.mortonJoinWhere = '(t.morton BETWEEN r.low AND r.upper)'
+        
         if self.granularity == 'day':
             self.queryColumns = ['time VARCHAR2(20)', 'X NUMBER', 'Y NUMBER', 'Z FLOAT']
             self.params = [1, 4, 4, 3, 1, -2, 0, 3, 4, 0, 0, 4, 3, 0, 3, 4, 1, 4]
@@ -283,7 +282,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         if self.integration == 'deep' or (self.start_date is None and self.end_date is None and self.integration == 'loose'): 
             timeWhere = ''
         elif self.integration == 'loose': 
-            timeWhere = whereClause.addTimeCondition(times, 't.time', self.timeType)
+            timeWhere = whereClause.addTimeCondition(times, 'time', self.timeType)
         
         return whereClause.getWhereStatement([timeWhere, mortonWhere]), ranges, morPrep, insert, rangeTab
 
@@ -304,10 +303,12 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
             if isinstance(geometry, list):
                 data1 = self.structure.getMortonRanges(geometry[0], coarser, 
                                                        continuous = False,
-                                                       maxRanges = self.maxRanges)[1]
+                                                       maxRanges = self.maxRanges,
+                                                       numLevels = self.numLevels)[1]
                 data2 = self.structure.getMortonRanges(geometry[1], coarser, 
                                                        continuous = False,
-                                                       maxRanges = self.maxRanges)[1]
+                                                       maxRanges = self.maxRanges,
+                                                       numLevels = self.numLevels)[1]
                 morPrep = time.time() - start1
                 ranges = len(data1) + len(data2)
                 start2 = time.time()
@@ -319,15 +320,16 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                     cursor = connection.cursor()
                     ora.createIOT(cursor, rangeTable, self.joinColumns, 'low', True)
                     if len(data1):
-                        sqlldrCommand = self.sqlldr(rangeTable, ['LOW', 'UPPER'], format_lst(data1))
-                        os.system(sqlldrCommand)   
+                        sqlldrCommand = self.sqlldr(rangeTable, ['LOW', 'UPPER'], format_lst(data1)) #TODO: separate time between formatting and performing the loading
+                        os.system(sqlldrCommand) 
                     if len(data2):
                         sqlldrCommand = self.sqlldr(rangeTable, ['LOW', 'UPPER'], format_lst(data2))
                         os.system(sqlldrCommand)
             else:
                 data = self.structure.getMortonRanges(geometry, coarser, 
                                                       continuous, 
-                                                      distinctIn = True)[1]
+                                                      maxRanges = self.maxRanges,
+                                                       numLevels = self.numLevels)[1]
                 morPrep = time.time() - start1
                 start2 = time.time()
                 if len(data) == 0:
@@ -354,10 +356,12 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         if isinstance(geometry, list):
             (mimranges, mxmranges1, range1) = self.structure.getMortonRanges(geometry[0], 
                                                 coarser, continuous = False, 
-                                                maxRanges = int(self.maxRanges / 2))
+                                                maxRanges = int(self.maxRanges / 2),
+                                                numLevels = self.numLevels)
             (mimranges, mxmranges2, range2) = self.structure.getMortonRanges(geometry[1], 
                                                 coarser, continuous = False, 
-                                                maxRanges = int(self.maxRanges / 2))
+                                                maxRanges = int(self.maxRanges / 2),
+                                                numLevels = self.numLevels)
             morPrep = time.time() - start1            
             ranges = range1 + range2
 
@@ -371,7 +375,10 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                 mortonWhere2 = whereClause.addMortonCondition(mxmranges2, 'morton')         
             mortonWhere = ' OR '.join(['(' + mortonWhere1 + ')', '(' + mortonWhere2 +')'])
         else:
-            (mimranges, mxmranges, ranges) = self.structure.getMortonRanges(geometry, coarser, continuous, maxRanges = self.maxRanges)
+            (mimranges, mxmranges, ranges) = self.structure.getMortonRanges(geometry,
+                                                 coarser, continuous, 
+                                                 maxRanges = self.maxRanges,
+                                                 numLevels = self.numLevels)
             morPrep = time.time() - start1            
             if len(mimranges) == 0 and len(mxmranges) == 0:
                 print 'None morton range in specified extent!'
@@ -408,6 +415,7 @@ ora.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
             else:
                 query = ora.getCTASStatement(queryTab, ora.getTableSpaceString(self.tableSpace)) + \
 '(' + self.getPointInPolygonStatement(tempName, '*', ['X', 'Y', 'Z', 'TIME'], zWhere) + ')'
+        
 
         connection = self.getConnection()
         cursor = connection.cursor()
@@ -431,17 +439,17 @@ ora.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
         cursor = connection.cursor()
         lst = []
 
-        #======================================================================
+        #========================================================================
         #       Preparation
-        #======================================================================
+        #========================================================================
         whereStatement, ranges, morPrep, insert, rangeTab  = self.prepareQuery(qid)
         lst.append(round(morPrep, 6)) # preparation
         lst.append(round(insert, 6)) # insert ranges into table
         lst.append(ranges) #number of ranges
 
-        #======================================================================
+        #========================================================================
         #       First approximation of query region
-        #======================================================================
+        #========================================================================
 
         if whereStatement is not '':
             if rangeTab is not None:
@@ -451,8 +459,8 @@ FROM """ + self.iotTableName + " t, " + rangeTab + """ r
 """ + whereStatement
 
             else:
-                query = "select "+ ora.getHintStatement([ora.getParallelStringQuery(self.numProcesses)]) + ', '.join(self.columnNames) + """ 
-from """ + self.iotTableName + """ t 
+                query = "SELECT "+ ora.getHintStatement([ora.getParallelStringQuery(self.numProcesses)]) + ', '.join(self.columnNames) + """ 
+FROM """ + self.iotTableName + """ 
 """ + whereStatement
 
             start1 = time.time()
@@ -514,7 +522,7 @@ FROM (
     """ X, Y, Z, TIME 
     FROM """+ qTable + """" 
     """ + whereValue
-
+                    
                     start1 = time.time()
                     cursor.execute(query)
                     end = round(time.time() - start1, 2)
@@ -634,6 +642,11 @@ fields terminated by ','
         ctfile.write(data)
         ctfile.close()
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
+        
+        print "Sqlldr command for inserting the ranges\n"
+        print sqlLoaderCommand
+        print 
+        
         return sqlLoaderCommand
               
     def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition):

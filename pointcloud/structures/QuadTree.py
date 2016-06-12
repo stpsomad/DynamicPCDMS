@@ -85,7 +85,6 @@ class QuadTree:
            (cx, cy, maxx, maxy)  #3
         ]
         
-
         level = parentLevel + 1
           
         codes = []
@@ -198,9 +197,6 @@ class QuadTree:
             mimranges = self.mergeConsecutiveRanges(imranges)
             mxmranges = self.mergeConsecutiveRanges(xmranges)
             return (mimranges, mxmranges)
-#        if unMerged:
-#            mxmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
-#            return (mxmranges, len(codes))
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
@@ -208,3 +204,6 @@ class QuadTree:
                 return ([], maxmranges, len(codes))
             else:
                 return ([], mmranges, len(codes))
+    
+    def visualise():
+        pass
