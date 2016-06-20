@@ -112,8 +112,8 @@ class dynamicOctree:
                 numLevels = math.floor(math.log(self.domainRegion.area() / region.area(), 2)) - coarser
 
         if dynamicCube(dynamicPoint(*self.startOct[:3]), dynamicPoint(*self.startOct[3:])).relationship(region):
-            return self._overlapCodes(numLevels, self.startLevel, self.startOctCode, region, *self.startOct)[0]
-        return []
+            return self._overlapCodes(numLevels, self.startLevel, self.startOctCode, region, *self.startOct)[0], numLevels
+        return [], numLevels
     
     def mergeConsecutiveRanges(self, mranges):
         if len(mranges) == 0:
@@ -186,17 +186,17 @@ class dynamicOctree:
         return (minx, miny, minz, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser = 3, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        codes = self.overlapCodes(region, coarser, continuous)
+        codes, Levels = self.overlapCodes(region, coarser, continuous)
 
         if distinctIn:
             (imranges, xmranges) = self.getDiffRanges(codes)
             mimranges = self.mergeConsecutiveRanges(imranges)
             mxmranges = self.mergeConsecutiveRanges(xmranges)
-            return (mimranges, mxmranges)
+            return (mimranges, mxmranges, len(codes), Levels)
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
                 return ([], maxmranges, len(codes))
             else:
-                return ([], mmranges, len(codes))
+                return ([], mmranges, len(codes), Levels)

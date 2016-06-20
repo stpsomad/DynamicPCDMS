@@ -46,7 +46,7 @@ The queries are repeated 6 times
 path = os.getcwd()
 benchmark = ['mini', 'medium', 'full']  
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
-hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
+hquery =  ["id", "prep.", 'insert', 'ranges', 'Levels', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
 
 for integr in integrations:
     for fresh_reload in fresh_reloads:

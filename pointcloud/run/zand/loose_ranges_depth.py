@@ -41,7 +41,7 @@ The queries are repeated 3 times
 
 --START--\n\n\n""")
 
-hquery =  ["id", 'depth', "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
+hquery =  ["id", 'depth', "prep.", 'insert', 'ranges', 'Levels','fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
 path = os.getcwd()
 
 for integr in integrations:

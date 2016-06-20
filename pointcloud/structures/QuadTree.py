@@ -119,8 +119,8 @@ class QuadTree:
         if (numLevels == 'auto') or (numLevels < 0):
             numLevels = math.ceil(math.log(self.domainRegion.area / region.area, 2)) + coarser
         if box(*self.startQuad).intersects(region):
-            return self._overlapCodes(numLevels, self.startLevel, self.startQuadCode, region, *self.startQuad)[0]
-        return []
+            return self._overlapCodes(numLevels, self.startLevel, self.startQuadCode, region, *self.startQuad)[0], numLevels
+        return [], numLevels
     
     def mergeConsecutiveRanges(self, mranges):
         if len(mranges) == 0:
@@ -191,19 +191,16 @@ class QuadTree:
         return (minx,miny,maxx+1,maxy+1)
     
     def getMortonRanges(self, wkt, coarser, continuous = False, distinctIn = False, numLevels = None, maxRanges = None):
-        codes = self.overlapCodes(loads(wkt), coarser, numLevels)
+        codes, Levels = self.overlapCodes(loads(wkt), coarser, numLevels)
         if distinctIn:
             (imranges, xmranges) = self.getDiffRanges(codes)
             mimranges = self.mergeConsecutiveRanges(imranges)
             mxmranges = self.mergeConsecutiveRanges(xmranges)
-            return (mimranges, mxmranges)
+            return (mimranges, mxmranges, len(codes), Levels)
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
-                return ([], maxmranges, len(codes))
+                return ([], maxmranges, len(codes), Levels)
             else:
-                return ([], mmranges, len(codes))
-    
-    def visualise():
-        pass
+                return ([], mmranges, len(codes), Levels)

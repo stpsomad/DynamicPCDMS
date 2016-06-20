@@ -268,15 +268,15 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         (b) join: The table is joined explicitly with a table containing the 
         ranges."""
         if geometry == []:
-            mortonWhere, self.mortonJoinWhere, ranges, rangeTab, morPrep, insert = ('', '', 0, None, 0, 0)
+            mortonWhere, self.mortonJoinWhere, ranges, rangeTab, morPrep, insert, Levels = ('', '', 0, None, 0, 0, 0)
         else:
             if self.method == 'join':
                 rangeTab = (self.rangeTable + qid).upper()
-                ranges, morPrep, insert = self.join(geometry, coarser, rangeTab, continuous)
+                ranges, morPrep, insert, Levels = self.join(geometry, coarser, rangeTab, continuous)
                 mortonWhere = self.mortonJoinWhere
             elif self.method == 'sql':
                 rangeTab, insert = None, 0
-                mortonWhere, ranges, morPrep = self.sql(geometry, coarser, continuous)
+                mortonWhere, ranges, morPrep, Levels = self.sql(geometry, coarser, continuous)
         
         # if deep the time is in the morton code
         if self.integration == 'deep' or (self.start_date is None and self.end_date is None and self.integration == 'loose'): 
@@ -284,7 +284,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         elif self.integration == 'loose': 
             timeWhere = whereClause.addTimeCondition(times, 'time', self.timeType)
         
-        return whereClause.getWhereStatement([timeWhere, mortonWhere]), ranges, morPrep, insert, rangeTab
+        return whereClause.getWhereStatement([timeWhere, mortonWhere]), ranges, morPrep, insert, Levels, rangeTab
 
         
     def join(self, geometry, coarser, rangeTable, continuous = True):
@@ -297,18 +297,18 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         length = len(cursor.fetchall())
         connection.close()
         if length:
-            return 0, 0, 0
+            return 0, 0, 0, 0
         else:
             start1 = time.time()
             if isinstance(geometry, list):
-                data1 = self.structure.getMortonRanges(geometry[0], coarser, 
+                _, data1, _, Levels = self.structure.getMortonRanges(geometry[0], coarser, 
                                                        continuous = False,
                                                        maxRanges = self.maxRanges,
-                                                       numLevels = self.numLevels)[1]
-                data2 = self.structure.getMortonRanges(geometry[1], coarser, 
+                                                       numLevels = self.numLevels)
+                _, data2, _, Levels = self.structure.getMortonRanges(geometry[1], coarser, 
                                                        continuous = False,
                                                        maxRanges = self.maxRanges,
-                                                       numLevels = self.numLevels)[1]
+                                                       numLevels = self.numLevels)
                 morPrep = time.time() - start1
                 ranges = len(data1) + len(data2)
                 start2 = time.time()
@@ -326,10 +326,10 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                         sqlldrCommand = self.sqlldr(rangeTable, ['LOW', 'UPPER'], format_lst(data2))
                         os.system(sqlldrCommand)
             else:
-                data = self.structure.getMortonRanges(geometry, coarser, 
+                _, data, _, Levels = self.structure.getMortonRanges(geometry, coarser, 
                                                       continuous, 
                                                       maxRanges = self.maxRanges,
-                                                       numLevels = self.numLevels)[1]
+                                                       numLevels = self.numLevels)
                 morPrep = time.time() - start1
                 start2 = time.time()
                 if len(data) == 0:
@@ -343,7 +343,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                     os.system(sqlldrCommand)
                     ranges = len(data)
             insert = time.time() - start2
-            return ranges, morPrep, insert
+            return ranges, morPrep, insert, Levels
         
     
     def sql(self, geometry, coarser, continuous = True):
@@ -354,11 +354,11 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         
         start1 = time.time()
         if isinstance(geometry, list):
-            (mimranges, mxmranges1, range1) = self.structure.getMortonRanges(geometry[0], 
+            (mimranges, mxmranges1, range1, Levels) = self.structure.getMortonRanges(geometry[0], 
                                                 coarser, continuous = False, 
                                                 maxRanges = int(self.maxRanges / 2),
                                                 numLevels = self.numLevels)
-            (mimranges, mxmranges2, range2) = self.structure.getMortonRanges(geometry[1], 
+            (mimranges, mxmranges2, range2, Levels) = self.structure.getMortonRanges(geometry[1], 
                                                 coarser, continuous = False, 
                                                 maxRanges = int(self.maxRanges / 2),
                                                 numLevels = self.numLevels)
@@ -375,7 +375,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                 mortonWhere2 = whereClause.addMortonCondition(mxmranges2, 'morton')         
             mortonWhere = ' OR '.join(['(' + mortonWhere1 + ')', '(' + mortonWhere2 +')'])
         else:
-            (mimranges, mxmranges, ranges) = self.structure.getMortonRanges(geometry,
+            (mimranges, mxmranges, ranges, Levels) = self.structure.getMortonRanges(geometry,
                                                  coarser, continuous, 
                                                  maxRanges = self.maxRanges,
                                                  numLevels = self.numLevels)
@@ -385,7 +385,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                 mortonWhere = ''
             if len(mxmranges):
                 mortonWhere = whereClause.addMortonCondition(mxmranges, 'morton')
-        return mortonWhere, ranges, morPrep
+        return mortonWhere, ranges, morPrep, Levels
 
 
     def pointInPolygon(self, tempName, qid, check = False):
@@ -442,10 +442,11 @@ ora.getAlias("""TO_DATE(TIME, 'yyyy/mm/dd')""", 'TIME')], zWhere) + ')'
         #========================================================================
         #       Preparation
         #========================================================================
-        whereStatement, ranges, morPrep, insert, rangeTab  = self.prepareQuery(qid)
+        whereStatement, ranges, morPrep, insert, Levels, rangeTab  = self.prepareQuery(qid)
         lst.append(round(morPrep, 6)) # preparation
         lst.append(round(insert, 6)) # insert ranges into table
         lst.append(ranges) #number of ranges
+        lst.append(Levels) #depth of the tree
 
         #========================================================================
         #       First approximation of query region
@@ -541,7 +542,7 @@ FROM (
                     return lst
         else:
             print 'No data returned'
-            return [lst[0], lst[1], '-', '-','-','-','-']
+            return [lst[0], lst[1], '-', '-', '-','-','-','-']
     
             
     def decodeSpaceTime(self, result):

@@ -114,8 +114,8 @@ class Octree:
         if (numLevels == 'auto') or (numLevels < 0):
             numLevels = math.ceil(math.log(self.domainRegion.volume() / region.volume(), 4)) - coarser
         if Cube(Point3D(*self.startOct[:3]), Point3D(*self.startOct[3:])).relationship(region):
-            return self._overlapCodes(numLevels, self.startLevel, self.startOctCode, region, *self.startOct)[0]
-        return []
+            return self._overlapCodes(numLevels, self.startLevel, self.startOctCode, region, *self.startOct)[0], numLevels
+        return [], numLevels
     
     def mergeConsecutiveRanges(self, mranges):
         if len(mranges) == 0:
@@ -188,16 +188,16 @@ class Octree:
         return (minx, miny, minz, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        codes = self.overlapCodes(region, coarser, numLevels)
+        codes, Levels = self.overlapCodes(region, coarser, numLevels)
         if distinctIn:
             (imranges, xmranges) = self.getDiffRanges(codes)
             mimranges = self.mergeConsecutiveRanges(imranges)
             mxmranges = self.mergeConsecutiveRanges(xmranges)
-            return (mimranges, mxmranges)
+            return (mimranges, mxmranges, len(codes), Levels)
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
-                return ([], maxmranges, len(codes))
+                return ([], maxmranges, len(codes), Levels)
             else:
-                return ([], mmranges, len(codes))
+                return ([], mmranges, len(codes), Levels)

@@ -15,11 +15,11 @@ import pointcloud.oracleTools as ora
 ###   Setup Variables   ###
 ###########################
 dataset = 'zandmotor'
-case = 'lxyt_1_part1'
+case = 'lxyt_1_0_False_part1'
 repeat = 1
 ###########################
 
-hquery =  ["id", "prep.", 'insert', 'ranges', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
+hquery =  ["id", "prep.", 'insert', 'ranges', 'Levels', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
 queries = []
 
 path = os.getcwd()
@@ -45,7 +45,7 @@ for num in querier.ids:
         queries.append(lst)
         ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
         print tabulate([lst], hquery, tablefmt="plain")
-#    if querier.integration == 'deep':
-#        ora.dropTable(cursor, querier.rangeTable + str(num))
+    if querier.integration == 'deep':
+        ora.dropTable(cursor, querier.rangeTable + str(num))
 print
 print tabulate(queries, hquery, tablefmt="plain")

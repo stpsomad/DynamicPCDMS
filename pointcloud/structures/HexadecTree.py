@@ -119,8 +119,8 @@ class HexadecTree:
             else:
                 numLevels = math.floor(math.log(self.domainRegion.volume3D() / region.volume(), 3)) - coarser
         if Tesseract(Point4D(*self.startHexadec[:4]), Point4D(*self.startHexadec[4:])).relationship(region):
-            return self._overlapCodes(numLevels, self.startLevel, self.startHexadecCode, region, *self.startHexadec)[0]
-        return []
+            return self._overlapCodes(numLevels, self.startLevel, self.startHexadecCode, region, *self.startHexadec)[0], numLevels
+        return [], numLevels
     
     def mergeConsecutiveRanges(self, mranges):
         if len(mranges) == 0:
@@ -195,16 +195,16 @@ class HexadecTree:
         return (mint, minx, miny, minz, maxt + 1, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser = 5, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        codes = self.overlapCodes(region, coarser, continuous)
+        codes, Levels = self.overlapCodes(region, coarser, continuous)
         if distinctIn:
             (imranges, xmranges) = self.getDiffRanges(codes)
             mimranges = self.mergeConsecutiveRanges(imranges)
             mxmranges = self.mergeConsecutiveRanges(xmranges)
-            return (mimranges, mxmranges)
+            return (mimranges, mxmranges, len(codes), Levels)
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
-                return ([], maxmranges, len(codes))
+                return ([], maxmranges, len(codes), Levels)
             else:
-                return ([], mmranges, len(codes))
+                return ([], mmranges, len(codes), Levels)
