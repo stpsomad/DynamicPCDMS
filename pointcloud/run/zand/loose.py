@@ -57,13 +57,10 @@ for integr in integrations:
                 #================================================================
                 #                 Loading Phase
                 #================================================================
-                configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_part' + str(i) + '.ini'
+                configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + "_{0}_{1}".format(parallel, fresh_reload) + '_part' + str(i) + '.ini'
                 
-                # configuring the parameters
                 bulk = BulkLoader(configuration)
-                bulk.reload = fresh_reload
-                bulk.numProcesses = parallel
-                
+
                 loading = []
                 loading.append(benchmark[i - 1])
                           
@@ -89,7 +86,6 @@ for integr in integrations:
                 #                 Querying Phase
                 #================================================================
                 querier = Querier(configuration)
-                querier.numProcesses = parallel
                 
                 connection = bulk.getConnection()
                 cursor = connection.cursor()

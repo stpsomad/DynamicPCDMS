@@ -49,14 +49,9 @@ for dim in dims:
         for fresh_reload in fresh_reloads:
             loading, queries = [], []
             for benchmark in range(1, bench + 1):
-                configuration = path + '/ini/' + dataset + '/validation_part{0}.ini'.format(benchmark)
+                configuration = path + '/ini/' + dataset + '/validation_{0}_{1}_{2}_part{3}.ini'.format(parallel, dim, fresh_reload, benchmark)
                 validate = Validate(configuration)
-                
-                #configure the benchmark
-                validate.reload = fresh_reload
-                validate.dim = dim
-                validate.numProcesses = parallel
-                
+               
                 connection = validate.connect()
                 cursor = connection.cursor()
                 
@@ -71,7 +66,6 @@ for dim in dims:
             
                 #querying    
                 querier = Querier(configuration)
-                querier.numProcesses = parallel
                 
                 connection = querier.connect()
                 cursor = connection.cursor()
@@ -88,9 +82,7 @@ for dim in dims:
                         queries.append([query, t, points, filtering_pts])
                         
                         querier.dropQueryTable(cursor, query) #drop the table
-                
-            #cursor.execute('DROP TABLE {0} PURGE'.format((validate.spatialTable).upper()))
-            
+
             # print stats
             print """\n\n
 ---Case----

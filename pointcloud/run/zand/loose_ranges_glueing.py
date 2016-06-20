@@ -45,7 +45,7 @@ path = os.getcwd()
 
 for integr in integrations:
     queries = []
-    configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_part1.ini'
+    configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '0_False_part1.ini'
     querier = Querier(configuration)
     querier.numProcesses = 0
     connection = querier.getConnection()
@@ -57,6 +57,7 @@ for integr in integrations:
         os.system('python -m pointcloud.queryTab {0}'.format(configuration))
     
     if integr == 'lxyt':
+        # run two first with -2
         levels = [19, 19, 20, 19, 20, 22, 22, 19, 20, 19]
     elif integr == 'lxyzt':
         levels = [14, 14, 16, 15, 16, 17, 17, 15, 16, 15]

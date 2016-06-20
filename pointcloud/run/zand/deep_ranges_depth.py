@@ -46,7 +46,7 @@ path = os.getcwd()
 
 for integr in integrations:
     queries = []
-    configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_part1.ini'
+    configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '0_False_part1.ini'
     querier = Querier(configuration)
     querier.numProcesses = 0
     connection = querier.getConnection()
@@ -71,6 +71,7 @@ for integr in integrations:
                 queries.append(lst)
                 ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
                 print tabulate([lst], hquery, tablefmt="plain")
+            ora.dropTable(cursor, querier.rangeTable + str(num))
 
     print integr + '\n\n'
     print tabulate(queries, hquery, tablefmt="plain")
