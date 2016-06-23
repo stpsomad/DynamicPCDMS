@@ -197,6 +197,6 @@ class dynamicOctree:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
-                return ([], maxmranges, len(codes))
+                return ([], maxmranges, len(codes), Levels)
             else:
                 return ([], mmranges, len(codes), Levels)

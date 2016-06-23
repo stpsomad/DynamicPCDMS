@@ -33,7 +33,7 @@ for integr in integrations:
         loadings = []
         queries = []
         for i in range(1,bench + 1):
-            configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_part' + str(i) + '.ini'
+            configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + "_8_False_part" + str(i) + '.ini'
 
             bulk = BulkLoader(configuration)
             loading = []

@@ -47,6 +47,7 @@ fresh reload of the data and not.
 for dim in dims:
     for parallel in parallels:
         for fresh_reload in fresh_reloads:
+
             loading, queries = [], []
             for benchmark in range(1, bench + 1):
                 configuration = path + '/ini/' + dataset + '/validation_{0}_{1}_{2}_part{3}.ini'.format(parallel, dim, fresh_reload, benchmark)
@@ -58,7 +59,7 @@ for dim in dims:
                 # check if the table exists, if not it is created
                 cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[(validate.spatialTable).upper(),])
                 length = len(cursor.fetchall())
-                if length and validate.reload:
+                if (length and validate.reload) or (length and validate.init):
                     cursor.execute('DROP TABLE {0} PURGE'.format((validate.spatialTable).upper()))
                                
                 load, rtree, btree, sizet, sizeb, sizer, points = validate.loadSpatialSqlldr()
