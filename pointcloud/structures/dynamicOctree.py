@@ -186,7 +186,7 @@ class dynamicOctree:
         return (minx, miny, minz, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser = 3, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        codes, Levels = self.overlapCodes(region, coarser, continuous)
+        codes, Levels = self.overlapCodes(region, coarser, continuous, numLevels)
 
         if distinctIn:
             (imranges, xmranges) = self.getDiffRanges(codes)

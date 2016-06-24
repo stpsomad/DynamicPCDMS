@@ -195,7 +195,7 @@ class HexadecTree:
         return (mint, minx, miny, minz, maxt + 1, maxx + 1, maxy + 1, maxz + 1)
     
     def getMortonRanges(self, region, coarser = 5, continuous = True, distinctIn = False, numLevels = None, maxRanges = None):
-        codes, Levels = self.overlapCodes(region, coarser, continuous)
+        codes, Levels = self.overlapCodes(region, coarser, continuous, numLevels)
         if distinctIn:
             (imranges, xmranges) = self.getDiffRanges(codes)
             mimranges = self.mergeConsecutiveRanges(imranges)
