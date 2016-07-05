@@ -643,11 +643,7 @@ fields terminated by ','
         ctfile.write(data)
         ctfile.close()
         sqlLoaderCommand = "sqlldr " + self.getConnectString() + " direct=true control=" + controlFile + ' bad=' + badFile + " log=" + logFile
-        
-        print "Sqlldr command for inserting the ranges\n"
-        print sqlLoaderCommand
-        print 
-        
+
         return sqlLoaderCommand
               
     def getPointInPolygonStatement(self, approxTable, columns, columnsPIP, condition):

@@ -62,6 +62,7 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
         
         query = ora.getCTASStatement(self.queryResult + str(qid)) + """
 (""" + base + ")"
+
         
         start = time.time()
         cursor.execute(query)
@@ -90,7 +91,7 @@ if __name__ == "__main__":
     path = os.getcwd()
        
     for num in range(1,2):
-        configuration = path + '/ini/' + dataset + '/validation_part{0}.ini'.format(num)
+        configuration = path + '/ini/' + dataset + '/validation_0_3_False_part{0}.ini'.format(num)
         
         querier = Querier(configuration)
         connection = querier.connect()

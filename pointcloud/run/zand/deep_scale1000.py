@@ -15,7 +15,7 @@ import os
 ###########################
 dataset = 'zandmotor'
 integrations = ['dxyt', 'dxyzt']
-scaling = '1'
+scaling = '1000'
 repeatQueries = 6
 ###########################
 
@@ -29,12 +29,12 @@ benchmark = ['mini', 'medium', 'full']
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
 hquery =  ["id", "prep.", 'insert', 'ranges', 'Levels', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
 
-fh = open('integrated_scale1_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
+fh = open('integrated_scale1000_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
 fh.write('Benchmark executed on ')
 fh.write(time.strftime("%d/%m/%Y"))
 fh.write('\n')
 fh.write(
-"""CASE: Integrated approach (deep) with scale of 1
+"""CASE: Integrated approach (deep) with scale of 1000
 
 Different approaches examined are:
     * z as an aatribute and as part of the morton key

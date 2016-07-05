@@ -63,6 +63,18 @@ for fresh_reload in fresh_reloads:
                 configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + "_{0}_{1}".format(parallel, fresh_reload) + '_part' + str(i) + '.ini'
     
                 bulk = BulkLoader(configuration)
+                connection = bulk.getConnection()
+                cursor = connection.cursor()
+                if i == 1:
+                    cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[bulk.iotTableName.upper(),])
+                    length = len(cursor.fetchall())
+                    if length:
+                        cursor.execute("DROP TABLE " + bulk.iotTableName + " PURGE")
+                    
+                    cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[bulk.metaTable.upper(),])
+                    length = len(cursor.fetchall())
+                    if length:
+                        cursor.execute("DROP TABLE " + bulk.metaTable + " PURGE")
                 
                 loading = []
                 loading.append(benchmark[i - 1])
@@ -106,8 +118,8 @@ for fresh_reload in fresh_reloads:
                             start = time.time()
                             lst = querier.query(num)
                             lst.append(round(time.time() - start, 2))
-                            lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
-                            lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
+                            lst.append(round((lst[7] - lst[8])/float(lst[8])*100,2))
+                            lst.append(round(lst[1]+lst[4]+lst[5]+lst[6]+lst[9],2))
                             lst.insert(0, num)
                             sublist.append(lst)
                             ora.dropTable(cursor, querier.queryTable + '_' +  str(num))               
@@ -118,12 +130,13 @@ for fresh_reload in fresh_reloads:
             print tabulate(loadings, hloading, tablefmt="plain")
             for i in range(len(maxRanges)):
                 print
-                print 'maximum ranges: {0}'.format(maxRanges[i])
+                print 'maximum ranges: {0}\n'.format(maxRanges[i])
                 print tabulate(queries[i], hquery, tablefmt="plain")
 
             fh.write('integration: {0}\nreload:{1}\nparallel:{2}\n\n'.format(integr, fresh_reload, parallel))
             fh.write('\n---LOADING---\n')
             fh.write(tabulate(loadings, hloading, tablefmt="plain"))
+            fh.write('\n')
             fh.write('\n---QUERYING---\n')
             for i in range(len(maxRanges)):
                 fh.write('maximum ranges: {0}'.format(maxRanges[i]))

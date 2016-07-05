@@ -193,11 +193,11 @@ class Octree:
             (imranges, xmranges) = self.getDiffRanges(codes)
             mimranges = self.mergeConsecutiveRanges(imranges)
             mxmranges = self.mergeConsecutiveRanges(xmranges)
-            return (mimranges, mxmranges, len(codes), Levels)
+            return (mimranges, mxmranges, len(mimranges) + len(mxmranges), Levels)
         else:
             mmranges = self.mergeConsecutiveRanges(self.getAllRanges(codes))
             if maxRanges != None:
                 maxmranges = self.mergeRanges(mmranges, maxRanges)
-                return ([], maxmranges, len(codes), Levels)
+                return ([], maxmranges, len(maxmranges), Levels)
             else:
-                return ([], mmranges, len(codes), Levels)
+                return ([], mmranges, len(mmranges), Levels)

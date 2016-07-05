@@ -362,7 +362,7 @@ dbms_output.enable;
 SELECT sdo_index_table into idx_tabname FROM USER_SDO_INDEX_INFO
 where table_name = :name and sdo_index_type = 'RTREE';
 execute immediate 'analyze table '||idx_tabname||' compute system statistics for table';
-select blocks * 0.0078125 into size_in_mb from USER_TABLES where table_name = idx_tabname;
+select blocks * 0.03125 into size_in_mb from USER_TABLES where table_name = idx_tabname;
 dbms_output.put_line (to_char(size_in_mb));
 END;
     """

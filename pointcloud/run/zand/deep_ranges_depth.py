@@ -58,7 +58,7 @@ for integr in integrations:
         os.system('python -m pointcloud.queryTab {0}'.format(configuration))
     
     for num in querier.ids:
-        for i in range(9, 20):
+        for i in range(9, 18):
             querier.numLevels = i
             for j in range(repeat):
                 start = time.time()

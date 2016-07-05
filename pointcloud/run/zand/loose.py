@@ -60,6 +60,20 @@ for integr in integrations:
                 configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + "_{0}_{1}".format(parallel, fresh_reload) + '_part' + str(i) + '.ini'
                 
                 bulk = BulkLoader(configuration)
+                
+                bulk = BulkLoader(configuration)
+                connection = bulk.getConnection()
+                cursor = connection.cursor()
+                if i == 1:
+                    cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[bulk.iotTableName.upper(),])
+                    length = len(cursor.fetchall())
+                    if length:
+                        cursor.execute("DROP TABLE " + bulk.iotTableName + " PURGE")
+                    
+                    cursor.execute('SELECT table_name FROM all_tables WHERE table_name = :1',[bulk.metaTable.upper(),])
+                    length = len(cursor.fetchall())
+                    if length:
+                        cursor.execute("DROP TABLE " + bulk.metaTable + " PURGE")
 
                 loading = []
                 loading.append(benchmark[i - 1])
@@ -99,8 +113,8 @@ for integr in integrations:
                         start = time.time()
                         lst = querier.query(num)
                         lst.append(round(time.time() - start, 2))
-                        lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
-                        lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
+                        lst.append(round((lst[7] - lst[8])/float(lst[8])*100,2))
+                        lst.append(round(lst[1]+lst[4]+lst[5]+lst[6]+lst[7],2))
                         lst.insert(0, num)
                         queries.append(lst)
                         ora.dropTable(cursor, querier.queryTable + '_' +  str(num))               

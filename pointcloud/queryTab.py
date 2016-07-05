@@ -66,7 +66,7 @@ Z_MAX NUMBER
             cursor.execute("INSERT INTO {0} (ID, DATASET, TYPE, START_DATE, END_DATE, DATE_TYPE, Z_MIN, Z_MAX) VALUES (:1, :2, :3, TO_DATE(:4, 'yyyy-mm-dd'), TO_DATE(:5, 'yyyy-mm-dd'), :6, :7, :8)".format(self.queriesTable), [data[0], data[1], data[2], data[4], data[5], data[6], data[7], data[8]])
         connection.commit()
         
-    def updateSRID(self):
+    def updateSRID(self, srid):
         """
         Updates the SRID of the query table to the specified one.
         """
@@ -76,7 +76,7 @@ Z_MAX NUMBER
         ora.mogrifyExecute(cursor, """UPDATE (SELECT GEOMETRY
 FROM """ + self.queriesTable + """
 WHERE GEOMETRY IS NOT NULL) t
-SET t.GEOMETRY.SDO_SRID = """ + str(self.srid))
+SET t.GEOMETRY.SDO_SRID = """ + str(srid))
         connection.commit()
     
     def updateSpatialMeta(self):
@@ -93,20 +93,79 @@ WHERE TABLE_NAME = '""" + self.queriesTable + "'")
 
         ora.updateSpatialMeta(connection, self.queriesTable, 'GEOMETRY', self.cols, self.lows, self.uppers, self.tols, self.srid)
     
+    def create3DQuerier(self):
+        connection = ora.getConnection(self.user, self.password, self.host, self.port, self.database)
+        cursor = connection.cursor()
+        
+        ora.mogrifyExecute(cursor, "CREATE TABLE " + self.queriesTable + """
+AS SELECT * 
+FROM QUERIES""")
 
+
+    def Extrude3D(self):
+        connection = ora.getConnection(self.user, self.password, self.host, self.port, self.database)
+        cursor = connection.cursor()
+        ora.mogrifyExecute(cursor, """
+DECLARE
+  GEOM_2D SDO_GEOMETRY;
+  Q_TYPE VARCHAR2(50);
+  LINE SDO_GEOMETRY;
+  LINE_REV SDO_GEOMETRY;
+  GEOM_3D SDO_GEOMETRY;
+  VALID VARCHAR2(50);
+  WKTGEOM CLOB;
+  COUNTER NUMBER;
+
+BEGIN
+  FOR i IN 1..12 LOOP
+    SELECT Q.TYPE INTO Q_TYPE
+    FROM QUERIES Q
+    WHERE Q.ID = i;
+    
+    IF (LOWER(Q_TYPE) = 'space - time' OR LOWER(Q_TYPE) = 'space') THEN
+      SELECT Q.GEOMETRY INTO GEOM_2D
+      FROM QUERIES Q
+      WHERE Q.ID = i;
+      
+      LINE := SDO_UTIL.POLYGONTOLINE(GEOM_2D);
+      LINE_REV := SDO_UTIL.REVERSE_LINESTRING(LINE);
+      wktgeom := 'POLYGON (' || SUBSTR (SDO_UTIL.TO_WKTGEOMETRY(LINE_REV), 12) || ')';
+        
+      GEOM_3D := SDO_UTIL.EXTRUDE(SDO_UTIL.FROM_WKTGEOMETRY(wktgeom), 
+                                  SDO_NUMBER_ARRAY(-100),
+                                  SDO_NUMBER_ARRAY(100),
+                                  0.001);
+                                  
+      UPDATE (SELECT GEOMETRY FROM QUERIES_3D WHERE ID=i) SET GEOMETRY = GEOM_3D;
+    END IF;
+  END LOOP;
+  COMMIT;
+  
+  UPDATE (SELECT GEOMETRY
+  FROM QUERIES_3D
+  WHERE GEOMETRY IS NOT NULL) t 
+  set t.geometry.sdo_srid = 28992;
+  COMMIT;
+END;""")
+        
 def main(config):
     querier = QueryTable(config)
-    querier.createQueriesTable()
-    cwd = os.getcwd()
-    qfile = open(cwd + '/pointcloud/queries.txt', 'r')
-    for i in qfile:
-        querier.getInsertInto(literal_eval(i))
-    qfile.close()
     
-    #update to specified SRID
-    querier.updateSRID()
-    #update the geometry metadata
-    querier.updateSpatialMeta()
+    if querier.queriesTable.lower() == 'queries_3d':
+        querier.create3DQuerier()
+        querier.Extrude3D()
+    else:        
+        querier.createQueriesTable()
+        cwd = os.getcwd()
+        qfile = open(cwd + '/pointcloud/queries.txt', 'r')
+        for i in qfile:
+            querier.getInsertInto(literal_eval(i))
+        qfile.close()
+        
+        #update to specified SRID
+        querier.updateSRID(querier.srid)
+        #update the geometry metadata
+        querier.updateSpatialMeta()
 
 if __name__ == "__main__":
     main(sys.argv[1])

@@ -123,9 +123,6 @@ CREATE INDEX """ + indexName + " ON " + tableName + """(GEOM)
 INDEXTYPE IS MDSYS.SPATIAL_INDEX
 """ + indx_parameters + """
 """ + ora.getParallelString(numProcesses))
-
-#    def rebuildIndex(self, cursor, tableName, numProcesses):
-#        ora.mogrifyExecute(cursor, """ALTER INDEX """ + tableName + "_idx REBUILD" + ora.getParallelString(numProcesses))
         
     def dropSpatialIndex(self, cursor, tableName):
 
@@ -212,7 +209,7 @@ WHERE TABLE_NAME = '""" + self.spatialTable + "'")
 if __name__=="__main__":
     dataset = 'zandmotor'
     path = os.getcwd()   
-    configuration = path + '/ini/' + dataset + '/validation_part1.ini'
+    configuration = path + '/ini/' + dataset + '/validation_0_3_False_part1.ini'
     validate = Validate(configuration)
     
     load, rtree, btree, sizet, sizeb, sizer, points = validate.loadSpatialSqlldr()
