@@ -83,7 +83,7 @@ class dynamicOctree:
             
             if relation: #1 or 2
                 octCode = (parentCode << 3) + octIndex
-                if parentLevel == maxDepth:
+                if parentLevel == maxDepth or relation == 1:
                         codes.append((octCode, level, relation == 1, self.octCodeToMortonRange(octCode, level))) # relation = 1 indicates that this morton range is fully within query region
                         c += 1
                 else:

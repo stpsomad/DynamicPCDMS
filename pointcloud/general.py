@@ -40,7 +40,7 @@ DM_SQLLDR = {
 DM_FLAT = { # The name of the column in the DB is computed with getDBColumn
     'x': 'NUMBER',
     'y': 'NUMBER',
-    'z': 'FLOAT',
+    'z': 'NUMBER',
     'X': 'NUMBER',
     'Y': 'NUMBER',
     'Z': 'NUMBER',

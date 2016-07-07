@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 31 19:59:03 2016
+Created on Thu Jul 07 08:44:32 2016
 
-@author: Stella Psomadaki
+@author: Stella
 """
 
 #run for mini
@@ -17,19 +17,19 @@ import pointcloud.oracleTools as ora
 ###   Setup Variables   ###
 ###########################
 dataset = 'zandmotor'
-integrations = ['lxyt', 'lxyzt']
-merges = [10, 100, 1000, 10000]
-scaling = '1'
+integrations = ['dxyt', 'dxyzt']
+scaling = '10000'
 repeat = 3
-queriyIds = [1, 2, 3, 4, 6, 7, 8, 9, 11, 12]
+merges = [10, 100, 1000, 10000, 100000]
 ###########################
 
-fh = open('non-int_glueing_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
+
+fh = open('ranges_int_glueing_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
 fh.write('Test executed on \n')
 fh.write(time.strftime("%d/%m/%Y"))
 fh.write('\n')
 fh.write(
-"""CASE: Non-integrated approach (loose) with scale of 1
+"""CASE: Integrated approach (deep) with scale of 10,000
 
 Test to identufy what is the effect of having different degree of merging.
 
@@ -55,28 +55,28 @@ for integr in integrations:
     length = len(cursor.fetchall())
     if not length:
         os.system('python -m pointcloud.queryTab {0}'.format(configuration))
+
+    if integr == 'dxyt':
+        levels = [16, 16, 15, 17, 13, 16, 16, 16, 17, 13, 15, 17]
+    elif integr == 'dxyzt':
+        levels = [15, 15, 14, 15, 12, 15, 15, 14, 15, 13, 14, 15]
     
-    if integr == 'lxyt':
-        # run two first with -2
-        levels = [19, 19, 20, 19, 20, 22, 22, 19, 20, 19]
-    elif integr == 'lxyzt':
-        levels = [14, 14, 16, 15, 16, 17, 17, 15, 16, 15]
-    
-    for num in range(len(queriyIds)):
-        querier.numLevels = levels[num]
+    for num in querier.ids:
+        querier.numLevels = levels[num-1]
         for merge in merges:
             querier.maxRanges = merge
             for j in range(repeat):
                 start = time.time()
-                lst = querier.query(str(queriyIds[num]))
+                lst = querier.query(num)
                 lst.append(round(time.time() - start, 2))
-                lst.append(round((float(lst[6]) - float(lst[7]))/float(lst[7])*100,2))
-                lst.append(round(lst[1] + lst[3] + lst[4] + lst[5] + lst[8],2))
+                lst.append(round((float(lst[7]) - float(lst[8]))/float(lst[8])*100,2))
+                lst.append(round(lst[1]+lst[4]+lst[5]+lst[6]+lst[9],2))
                 lst.insert(0, merge)
-                lst.insert(0, queriyIds[num])
+                lst.insert(0, num)
                 queries.append(lst)
-                ora.dropTable(cursor, querier.queryTable + '_' +  str(queriyIds[num]))
+                ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
                 print tabulate([lst], hquery, tablefmt="plain")
+            ora.dropTable(cursor, querier.rangeTable + str(num))
 
     print integr + '\n\n'
     print tabulate(queries, hquery, tablefmt="plain")

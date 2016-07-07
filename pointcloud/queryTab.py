@@ -99,7 +99,8 @@ WHERE TABLE_NAME = '""" + self.queriesTable + "'")
         
         ora.mogrifyExecute(cursor, "CREATE TABLE " + self.queriesTable + """
 AS SELECT * 
-FROM QUERIES""")
+FROM QUERIES
+WHERE ID <= 12""")
 
 
     def Extrude3D(self):
@@ -109,12 +110,58 @@ FROM QUERIES""")
 DECLARE
   GEOM_2D SDO_GEOMETRY;
   Q_TYPE VARCHAR2(50);
-  LINE SDO_GEOMETRY;
-  LINE_REV SDO_GEOMETRY;
   GEOM_3D SDO_GEOMETRY;
   VALID VARCHAR2(50);
+
+BEGIN
+  UPDATE (SELECT GEOMETRY
+  FROM {0}
+  WHERE GEOMETRY IS NOT NULL) t 
+  SET t.GEOMETRY.SDO_SRID = NULL;
+  COMMIT;
+
+  FOR i IN 1..12 LOOP
+    SELECT Q.TYPE INTO Q_TYPE
+    FROM QUERIES Q
+    WHERE Q.ID = i;
+    
+    IF (LOWER(Q_TYPE) = 'space - time' OR LOWER(Q_TYPE) = 'space') THEN
+      SELECT Q.GEOMETRY INTO GEOM_2D
+      FROM {0} Q
+      WHERE Q.ID = i;
+      
+       GEOM_3D := SDO_UTIL.EXTRUDE(GEOM_2D, 
+                                  SDO_NUMBER_ARRAY(-100),
+                                  SDO_NUMBER_ARRAY(100),
+                                  0.001);
+                                  
+      
+        dbms_output.put_line('Updating query ' || i);
+        UPDATE (SELECT GEOMETRY FROM {0} WHERE ID=i) SET GEOMETRY = GEOM_3D;
+  END IF;
+  END LOOP;
+  COMMIT;
+  
+  UPDATE (SELECT GEOMETRY
+  FROM {0}
+  WHERE GEOMETRY IS NOT NULL) t 
+  set t.GEOMETRY.SDO_SRID = 28992;
+  COMMIT;
+END;
+/""".format(self.queriesTable.upper()))
+
+
+    def fixOrientation(self):
+        connection = ora.getConnection(self.user, self.password, self.host, self.port, self.database)
+        cursor = connection.cursor()
+        cursor.execute("""
+DECLARE
+  GEOM_2D SDO_GEOMETRY;
+  Q_TYPE VARCHAR2(50);
+  LINE SDO_GEOMETRY;
+  LINE_REV SDO_GEOMETRY;
+  poly SDO_GEOMETRY;
   WKTGEOM CLOB;
-  COUNTER NUMBER;
 
 BEGIN
   FOR i IN 1..12 LOOP
@@ -126,27 +173,21 @@ BEGIN
       SELECT Q.GEOMETRY INTO GEOM_2D
       FROM QUERIES Q
       WHERE Q.ID = i;
-      
+        
       LINE := SDO_UTIL.POLYGONTOLINE(GEOM_2D);
       LINE_REV := SDO_UTIL.REVERSE_LINESTRING(LINE);
+      
       wktgeom := 'POLYGON (' || SUBSTR (SDO_UTIL.TO_WKTGEOMETRY(LINE_REV), 12) || ')';
-        
-      GEOM_3D := SDO_UTIL.EXTRUDE(SDO_UTIL.FROM_WKTGEOMETRY(wktgeom), 
-                                  SDO_NUMBER_ARRAY(-100),
-                                  SDO_NUMBER_ARRAY(100),
-                                  0.001);
-                                  
-      UPDATE (SELECT GEOMETRY FROM QUERIES_3D WHERE ID=i) SET GEOMETRY = GEOM_3D;
+      DBMS_OUTPUT.PUT_LINE(to_char(wktgeom));
+      poly := SDO_UTIL.FROM_WKTGEOMETRY(wktgeom);
+      
+      UPDATE (SELECT GEOMETRY FROM queries WHERE ID=i) SET GEOMETRY = poly;
     END IF;
   END LOOP;
   COMMIT;
-  
-  UPDATE (SELECT GEOMETRY
-  FROM QUERIES_3D
-  WHERE GEOMETRY IS NOT NULL) t 
-  set t.geometry.sdo_srid = 28992;
-  COMMIT;
-END;""")
+END;
+/""") 
+
         
 def main(config):
     querier = QueryTable(config)
@@ -164,6 +205,7 @@ def main(config):
         
         #update to specified SRID
         querier.updateSRID(querier.srid)
+        querier.fixOrientation()
         #update the geometry metadata
         querier.updateSpatialMeta()
 

@@ -133,7 +133,7 @@ class Cube(object):
             elif contains.matches(relation):
                 if  minz <= other.zmin <= maxz and minz <= other.zmax <= maxz:
                     return 1 # within
-                elif maxz < other.zmax or minz > other.zmin:
+                elif maxz < other.zmin or minz > other.zmax:
                     return 0 # disjoint
                 else:
                     return 2 # disjoint
@@ -169,7 +169,31 @@ class Polygon3D(object):
         * within (returns 1)
         * overlap (returns 2)""" 
         if isinstance(other, Cube):
-            return other.relationship(self)
+            """Relationship of a 3D polygon and a cube. 
+            
+            Uses the 2D intersection model to establish the relationship."""
+            geom2 = other.getWkt() 
+            geom1, minz, maxz = self.wkt, self.zmin, self.zmax
+            relation = geom1.relate(geom2) #relationship in 2D
+            
+            if not intersects.matches(relation):
+                return 0 # disjoint
+            elif contains.matches(relation):
+                if  minz <= other.ll.z <= maxz and minz <= other.ur.z <= maxz:
+                    return 1 # within
+                elif maxz <= other.ll.z or minz >= other.ur.z:
+                    return 0 # disjoint
+                else:
+                    return 2 # disjoint
+            else: # overlap
+                if excluding_interiors.matches(relation):
+                    return 0 # overlap only in boundaries, we do not count it
+                else:
+                    if maxz < other.ll.z or minz > other.ur.z:
+                        return 0 # disjoint
+                    else:
+                        return 2 # some interior of geom2 is in geom1
+
 
 class Sphere(object):
     def __init__(self, pt_ctr, radius):
@@ -293,7 +317,26 @@ class dynamicPolygon(object):
         * within (returns 1)
         * overlap (returns 2)"""
         if isinstance(other, dynamicCube):
-            return other.relationship(self)
+            geom2 = other.wkt2D()
+            relation = self.wkt.relate(geom2)
+            
+            if self.tmin <= other.ll.t <= self.tmax and self.tmax >= other.ur.t >= self.tmin: #self contains other in time
+                if not intersects.matches(relation):
+                    #self and other are disjoint in space
+                    return 0 # they are disjoint
+                elif contains.matches(relation):
+                    #self contains other in 2d space
+                    return 1
+                else:#self contains other in time and some overlap in 2d space
+                    return 2
+            elif self.tmax <= other.ll.t or self.tmin >= other.ur.t:
+                #self and other are disjoint is time
+                return 0 
+            else: #there is some overlap in time
+                if not intersects.matches(relation):
+                    return 0 #self and other are disjoint in 2d space
+                else: #some overlap in 2d space
+                    return 2
         
     def volume(self):
         """Returns the volume of the dynamic Polygon."""
@@ -428,7 +471,37 @@ class Polygon4D(object):
         * within (returns 1)
         * overlap (returns 2)""" 
         if isinstance(other, Tesseract):
-            return other.relationship(self)
+            geom2 = other.wkt2D()
+            relation = self.wkt.relate(geom2)
+            if self.tmin <= other.ll.t and self.tmax >= other.ur.t: #self contains other in time
+                if not intersects.matches(relation):
+                    #self and other are disjoint in space
+                    return 0 # they are disjoint
+                elif contains.matches(relation):
+                    #self contains other in 2d space
+                    if self.zmin <= other.ll.z and self.zmax >= other.ur.z: #self contains other in height
+                        return 1
+                    elif self.zmax <= other.ll.z or self.zmin >= other.ur.z: #self contains other in 2d space and time but not height
+                        return 0
+                    else: #self contains other in 2d space and time and some overlap in height
+                        return 2
+                else:#self contains other in time and some overlap in 2d space
+                    if self.zmax <= other.ll.z or self.zmin >= other.ur.z: #self contains other in 2d space and time but not height
+                        return 0
+                    else: #some overlap in height
+                        return 2
+            elif self.tmax <= other.ll.t or self.tmin >= other.ur.t:
+                #self and other are disjoint is time
+                return 0 
+            else: #there is some overlap in time
+                if not intersects.matches(relation):
+                    return 0 #self and other are disjoint in 2d space
+                else: #some overlap in 2d space
+                    if self.zmax <= other.ll.z or self.zmin >= other.ur.z: #self contains other in 2d space and time but not height
+                        return 0
+                    else: #some overlap in height
+                        return 2
+
         
     def volume(self):
         """Returns the 4- or 3- volume depending on the conditions."""

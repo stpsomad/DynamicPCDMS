@@ -56,16 +56,21 @@ for integr in integrations:
     length = len(cursor.fetchall())
     if not length:
         os.system('python -m pointcloud.queryTab {0}'.format(configuration))
+
+    end = 16
     
     for num in querier.ids:
-        for i in range(9, 18):
+        if num in [5,10]:
+            end = 13
+            
+        for i in range(9, end):
             querier.numLevels = i
             for j in range(repeat):
                 start = time.time()
                 lst = querier.query(num)
                 lst.append(round(time.time() - start, 2))
-                lst.append(round((lst[6] - lst[7])/float(lst[7])*100,2))
-                lst.append(round(lst[1]+lst[3]+lst[4]+lst[5]+lst[8],2))
+                lst.append(round((float(lst[7]) - float(lst[8]))/float(lst[8])*100,2))
+                lst.append(round(lst[1]+lst[4]+lst[5]+lst[6]+lst[9],2))
                 lst.insert(0, i)
                 lst.insert(0, num)
                 queries.append(lst)

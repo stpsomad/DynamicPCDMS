@@ -94,7 +94,7 @@ class QuadTree:
             relation = self._relation(region, box(*quad))
             if relation: #1 or 2
                 quadCode = (parentCode << 2) + quadIndex                
-                if parentLevel == maxDepth: #changed from original code
+                if parentLevel == maxDepth or relation == 1:
                     codes.append((quadCode, level, relation, self.quadCodeToMortonRange(quadCode, level)))
                     c += 1
                 else:
