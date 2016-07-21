@@ -116,23 +116,25 @@ ADD CONSTRAINT ID_PK PRIMARY KEY (ID)
         indx_parameters, dims = "", ""
         if dims > 1:
             dims = "sdo_indx_dims=" + str(dim)
-        indx_parameters = "PARAMETERS('" + dims + " tablespace=" + tablespace + " layer_gtype=POINT')"
-        
-        ora.mogrifyExecute(cursor, """
-CREATE INDEX """ + indexName + " ON " + tableName + """(GEOM)
-INDEXTYPE IS MDSYS.SPATIAL_INDEX
-""" + indx_parameters + """
-""" + ora.getParallelString(numProcesses))
+        indx_parameters = "PARAMETERS('" + dims + " tablespace=" + tablespace +\
+        " layer_gtype=POINT sdo_rtr_pctfree=0 work_tablespace=PCWORK sdo_fanout=48')"
+
+        sql = "CREATE INDEX " + indexName + " ON " + tableName +\
+        "(GEOM) INDEXTYPE IS MDSYS.SPATIAL_INDEX " + indx_parameters +\
+        " " + ora.getParallelString(numProcesses) + ";"
+
+        command = 'sqlplus -S ' + ora.getConnectString(self.user, self.password,\
+        self.host, self.port, self.database) + " <<< \"" + sql + "\""
+        os.system(command)
         
     def dropSpatialIndex(self, cursor, tableName):
-
         ora.mogrifyExecute(cursor, "DROP INDEX " + tableName + "_idx")
     
     def createIndex(self, cursor, tableName, indexName, tableSpace, numProcesses):
-        ora.mogrifyExecute(cursor, """
+        cursor.execute("""
 CREATE INDEX """ + indexName + ' ON ' + tableName  + """(TIME)
 """ + ora.getTableSpaceString(tableSpace) + """ 
-""" + ora.getParallelString(numProcesses))
+""" + ora.getParallelString(numProcesses))      
     
     def connect(self):
         connection = ora.getConnection(self.user, self.password, self.host, self.port, self.database)
@@ -197,6 +199,7 @@ WHERE TABLE_NAME = '""" + self.spatialTable + "'")
         #=======================================================================#
         table = float(ora.getSizeTable(cursor, self.spatialTable))
         btree = float(ora.getSizeTable(cursor, self.spatialTableBTree))
+        
         rtree = float(ora.getSizeUserSDOIndexes(cursor, self.spatialTable)) # also, gathers statistics for spatial part
         
         #=======================================================================#

@@ -65,10 +65,10 @@ DIRS = {
     'part1': '/pak2/usrdata/stella/Zandmotor_bench/part1/',
     'part2': '/pak2/usrdata/stella/Zandmotor_bench/part2/',
     'part3': '/pak2/usrdata/stella/Zandmotor_bench/part3/',
-    'c2012': '/pak2/usrdata/stella/Coastline_bench/medium/2012/',
-    'c2013': '/pak2/usrdata/stella/Coastline_bench/medium/2013/',
-    'c2014': '/pak2/usrdata/stella/Coastline_bench/medium/2014/',
-    'c2015': '/pak2/usrdata/stella/Coastline_bench/medium/2015/'}
+    'c-part1': '/pak2/usrdata/stella/Coastline_bench/mini/2012/',
+    'c-part2': '/pak2/usrdata/stella/Coastline_bench/mini/2013/',
+    'c-part3': ['/pak2/usrdata/stella/Coastline_bench/mini/2014/', '/pak2/usrdata/stella/Coastline_bench/mini/2015/']
+}
     
 def getFiles(inputElement, extensions = PC_FILE_FORMATS, recursive = False):
     """ Get the list of files with certain extensions contained in the folder 

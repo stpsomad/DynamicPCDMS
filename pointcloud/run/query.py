@@ -39,7 +39,10 @@ for num in querier.ids:
         start = time.time()
         lst = querier.query(num)
         lst.append(round(time.time() - start, 2))
-        lst.append(round((lst[7] - lst[8])/float(lst[8])*100,2))
+        if lst[8] != 0:
+            lst.append(round((lst[7] - lst[8])/float(lst[8])*100,2))
+        else:
+            lst.append(-9999)
         lst.append(round(lst[1]+lst[4]+lst[5]+lst[6]+lst[9],2))
         lst.insert(0, num)
         queries.append(lst)

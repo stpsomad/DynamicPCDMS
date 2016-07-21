@@ -83,18 +83,17 @@ maxy, maxz, maxt, scalex, scaley, scalez, offx, offy, offz FROM {0}""".format(se
                 
         self.queryTable = self.iotTableName + "_res"
         self.rangeTable = 'ranges_{0}{1}{2}{3}_'.format(self.dataset[0], self.integration[0], self.parse, self.scale).upper()
-        
+
         self.queryTableColumns = ['id', 'dataset', 'type', 'geometry', 'time', 'time_type', 'z']
         self.joinColumns = ['low NUMBER', 'upper NUMBER']
         self.mortonJoinWhere = '(t.morton BETWEEN r.low AND r.upper)'
         
         if self.granularity == 'day':
-            self.queryColumns = ['time VARCHAR2(20)', 'X NUMBER', 'Y NUMBER', 'Z FLOAT']
+            self.queryColumns = ['time VARCHAR2(20)', 'X NUMBER', 'Y NUMBER', 'Z NUMBER']
             self.params = [1, 4, 4, 3, 1, -2, 0, 3, 4, 0, 0, 4, 3, 0, 3, 4, 1, 4]
         else:
-            self.queryColumns = ['time INTEGER', 'X NUMBER','Y NUMBER', 'Z FLOAT']
-            self.params = [0, 4, 4, 3, 8, 1, 2, 8, 9, 2, 2, 9, 7, 3, 8, 12, 3, 11]
-            
+            self.queryColumns = ['time NUMBER', 'X NUMBER','Y NUMBER', 'Z NUMBER']
+            self.params = [0, 4, 4, 3, 8, 9, 1, 8, 9, 7, 1, 9, 7, 5, 8, 12, 5, 11]
         self.ozmin, self.ozmax  = 0, 0
         self.wkt = None
         self.start_date, self.end_date = None, None
@@ -185,7 +184,11 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                     times[0][1] = times[0][0]
                     coarser = self.params[4] #1, 8
                 elif self.qtype.lower() == 'space':
-                    coarser = self.params[5] #-2, 1
+                    if times[0][0] == times[0][1]:
+                        continuous = False
+                        coarser = self.params[5] #-2, 1
+                    else:
+                        coarser = self.params[5] - 7
                 elif self.timeType == 'continuous':
                     coarser = self.params[6] #0, 2
                 elif self.timeType == 'discrete':
@@ -204,7 +207,10 @@ WHERE id = """ + qid + """ AND dataset = '""" + self.dataset.lower() + "'")
                     coarser = self.params[8] #4, 9
                     times[0][1] = times[0][0]
                 elif self.qtype.lower() == 'space':
-                    coarser = self.params[9] #0, 2
+                    if times[0][0] == times[0][1]:
+                        coarser = self.params[9] #0, 2
+                    else:
+                        coarser = self.params[9] - 4
                 elif self.timeType == 'continuous':
                     coarser = self.params[10] #0, 2
                 elif self.timeType == 'discrete':

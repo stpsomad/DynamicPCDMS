@@ -53,7 +53,7 @@ for integr in integrations:
         #========================================================================
         #                               Loading Phase
         #========================================================================
-        configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_part' + str(i) + '.ini'
+        configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_0_False_part' + str(i) + '.ini'
 
         bulk = BulkLoader(configuration)
         loading = []

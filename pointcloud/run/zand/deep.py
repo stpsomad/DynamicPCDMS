@@ -100,7 +100,6 @@ for fresh_reload in fresh_reloads:
                 #================================================================
                 #                 Querying Phase
                 #================================================================
-            
                 querier = Querier(configuration)
                 connection = querier.getConnection()
                 cursor = connection.cursor()
@@ -125,22 +124,22 @@ for fresh_reload in fresh_reloads:
                             ora.dropTable(cursor, querier.queryTable + '_' +  str(num))               
                         ora.dropTable(cursor, querier.rangeTable + str(num))
                     queries.append(sublist)
+                    print 'maximum ranges: {0}\n'.format(maxRange)
+                    print tabulate(sublist, hquery, tablefmt="plain")
                 
             print
             print tabulate(loadings, hloading, tablefmt="plain")
-            for i in range(len(maxRanges)):
+            for i in queries:
                 print
-                print 'maximum ranges: {0}\n'.format(maxRanges[i])
-                print tabulate(queries[i], hquery, tablefmt="plain")
+                print tabulate(i, hquery, tablefmt="plain")
 
             fh.write('integration: {0}\nreload:{1}\nparallel:{2}\n\n'.format(integr, fresh_reload, parallel))
             fh.write('\n---LOADING---\n')
             fh.write(tabulate(loadings, hloading, tablefmt="plain"))
             fh.write('\n')
             fh.write('\n---QUERYING---\n')
-            for i in range(len(maxRanges)):
-                fh.write('maximum ranges: {0}'.format(maxRanges[i]))
-                fh.write(tabulate(queries[i], hquery, tablefmt="plain"))
+            for i in queries:
+                fh.write(tabulate(i, hquery, tablefmt="plain"))
                 fh.write('\n')
                 fh.write('\n')
 fh.close()

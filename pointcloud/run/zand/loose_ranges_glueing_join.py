@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 31 15:50:12 2016
+Created on Tue May 31 19:59:03 2016
 
 @author: Stella Psomadaki
 """
@@ -18,21 +18,20 @@ import pointcloud.oracleTools as ora
 ###########################
 dataset = 'zandmotor'
 integrations = ['lxyt', 'lxyzt']
+merges = [10, 100, 1000, 10000]
 scaling = '1'
 repeat = 3
-queryIds = [1, 2, 3, 4, 6, 7, 8, 9, 11, 12]
+queriyIds = [1, 2, 3, 4, 6, 7, 8, 9, 11, 12]
 ###########################
 
-fh = open('ranges_non-int_200_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
+fh = open('non-int_glueing_join_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
 fh.write('Test executed on \n')
 fh.write(time.strftime("%d/%m/%Y"))
 fh.write('\n')
 fh.write(
 """CASE: Non-integrated approach (loose) with scale of 1
 
-Test to identify if the number of extra points is caused from the 200 ranges 
-used as maximum or from the fact that the ranges come from more rough n-tree 
-blocks.
+Test to identufy what is the effect of having different degree of merging using the join method.
 
 Different approaches:
     * z as an attribute and as part of morton code
@@ -41,20 +40,15 @@ The queries are repeated 3 times
 
 --START--\n\n\n""")
 
-hquery =  ["id", 'depth', "prep.", 'insert', 'ranges', 'Levels','fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
+hquery =  ["id", 'maxRanges', "prep.", 'insert', 'ranges', 'Levels', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
 path = os.getcwd()
 
 for integr in integrations:
-    
-    if integr == 'lxyt':
-        end = 19
-    elif integr == 'lxyzt':
-        end = 17
-        
     queries = []
     configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + '_0_False_part1.ini'
     querier = Querier(configuration)
     querier.numProcesses = 0
+    querier.method = 'join'
     connection = querier.getConnection()
     cursor = connection.cursor()
     
@@ -63,25 +57,32 @@ for integr in integrations:
     if not length:
         os.system('python -m pointcloud.queryTab {0}'.format(configuration))
     
-    # till 15 not enough
-    for num in queryIds:
-        fh.write('\n\n')
-        for i in range(9, end):
-            querier.numLevels = i
+    if integr == 'lxyt':
+        levels = [19, 19, 20, 19, 20, 22, 22, 19, 20, 19]
+    elif integr == 'lxyzt':
+        levels = [14, 14, 16, 15, 16, 17, 17, 15, 16, 15]
+    
+    for num in range(len(queriyIds)):
+        fh.write('\n')
+        querier.numLevels = levels[num]
+        for merge in merges:
+            querier.maxRanges = merge
+            
             for j in range(repeat):
                 start = time.time()
-                lst = querier.query(str(num))
+                lst = querier.query(str(queriyIds[num]))
                 lst.append(round(time.time() - start, 2))
                 lst.append(round((float(lst[7]) - float(lst[8]))/float(lst[8])*100,2))
-                lst.append(round(lst[1]+lst[4]+lst[5]+lst[6]+lst[9],2))
-                lst.insert(0, i)
-                lst.insert(0, num)
+                lst.append(round(lst[1] + lst[4] + lst[5] + lst[6] + lst[9],2))
+                lst.insert(0, merge)
+                lst.insert(0, queriyIds[num])
                 queries.append(lst)
-                ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
-                print tabulate([lst], tablefmt="plain")
+                ora.dropTable(cursor, querier.queryTable + '_' +  str(queriyIds[num]))
+                print tabulate([lst], hquery, tablefmt="plain")
                 fh.write(tabulate([lst], tablefmt="plain"))
                 fh.write('\n')
-        fh.write('\n\n')
+            ora.dropTable(cursor, querier.rangeTable + str(queriyIds[num]))
+        fh.write('\n')
 
     print integr + '\n\n'
     print tabulate(queries, hquery, tablefmt="plain")

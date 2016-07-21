@@ -60,7 +60,8 @@ for integr in integrations:
     end = 16
     
     for num in querier.ids:
-        if num in [5,10]:
+        fh.write('\n\n')
+        if int(num) in [5,10]:
             end = 13
             
         for i in range(9, end):
@@ -76,7 +77,10 @@ for integr in integrations:
                 queries.append(lst)
                 ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
                 print tabulate([lst], hquery, tablefmt="plain")
+                fh.write(tabulate([lst], tablefmt="plain"))
+                fh.write('\n')
             ora.dropTable(cursor, querier.rangeTable + str(num))
+        fh.write('\n\n')
 
     print integr + '\n\n'
     print tabulate(queries, hquery, tablefmt="plain")

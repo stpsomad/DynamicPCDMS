@@ -63,20 +63,25 @@ for integr in integrations:
         levels = [14, 14, 16, 15, 16, 17, 17, 15, 16, 15]
     
     for num in range(len(queriyIds)):
+        fh.write('\n\n')
         querier.numLevels = levels[num]
         for merge in merges:
             querier.maxRanges = merge
+            
             for j in range(repeat):
                 start = time.time()
                 lst = querier.query(str(queriyIds[num]))
                 lst.append(round(time.time() - start, 2))
-                lst.append(round((float(lst[6]) - float(lst[7]))/float(lst[7])*100,2))
-                lst.append(round(lst[1] + lst[3] + lst[4] + lst[5] + lst[8],2))
+                lst.append(round((float(lst[7]) - float(lst[8]))/float(lst[8])*100,2))
+                lst.append(round(lst[1] + lst[4] + lst[5] + lst[6] + lst[9],2))
                 lst.insert(0, merge)
                 lst.insert(0, queriyIds[num])
                 queries.append(lst)
                 ora.dropTable(cursor, querier.queryTable + '_' +  str(queriyIds[num]))
                 print tabulate([lst], hquery, tablefmt="plain")
+                fh.write(tabulate([lst], tablefmt="plain"))
+                fh.write('\n')
+        fh.write('\n\n')
 
     print integr + '\n\n'
     print tabulate(queries, hquery, tablefmt="plain")

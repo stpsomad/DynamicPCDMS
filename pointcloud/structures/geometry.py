@@ -181,7 +181,7 @@ class Polygon3D(object):
             elif contains.matches(relation):
                 if  minz <= other.ll.z <= maxz and minz <= other.ur.z <= maxz:
                     return 1 # within
-                elif maxz <= other.ll.z or minz >= other.ur.z:
+                elif maxz < other.ll.z or minz > other.ur.z:
                     return 0 # disjoint
                 else:
                     return 2 # disjoint
@@ -288,7 +288,7 @@ class dynamicCube(object):
                     return 1
                 else:#self contains other in time and some overlap in 2d space
                     return 2
-            elif other.tmax <= self.ll.t or other.tmin >= self.ur.t:
+            elif other.tmax < self.ll.t or other.tmin > self.ur.t:
                 #self and other are disjoint is time
                 return 0 
             else: #there is some overlap in time
@@ -329,7 +329,7 @@ class dynamicPolygon(object):
                     return 1
                 else:#self contains other in time and some overlap in 2d space
                     return 2
-            elif self.tmax <= other.ll.t or self.tmin >= other.ur.t:
+            elif self.tmax < other.ll.t or self.tmin > other.ur.t:
                 #self and other are disjoint is time
                 return 0 
             else: #there is some overlap in time
@@ -428,23 +428,23 @@ class Tesseract(object):
                     #self contains other in 2d space
                     if other.zmin >= self.ll.z and other.zmax <= self.ur.z: #self contains other in height
                         return 1
-                    elif other.zmax <= self.ll.z or other.zmin >= self.ur.z: #self contains other in 2d space and time but not height
+                    elif other.zmax < self.ll.z or other.zmin > self.ur.z: #self contains other in 2d space and time but not height
                         return 0
                     else: #self contains other in 2d space and time and some overlap in height
                         return 2
                 else:#self contains other in time and some overlap in 2d space
-                    if other.zmax <= self.ll.z or other.zmin >= self.ur.z: #self contains other in 2d space and time but not height
+                    if other.zmax < self.ll.z or other.zmin > self.ur.z: #self contains other in 2d space and time but not height
                         return 0
                     else: #some overlap in height
                         return 2
-            elif other.tmax <= self.ll.t or other.tmin >= self.ur.t:
+            elif other.tmax < self.ll.t or other.tmin > self.ur.t:
                 #self and other are disjoint is time
                 return 0 
             else: #there is some overlap in time
                 if not intersects.matches(relation):
                     return 0 #self and other are disjoint in 2d space
                 else: #some overlap in 2d space
-                    if other.zmax <= self.ll.z or other.zmin >= self.ur.z: #self contains other in 2d space and time but not height
+                    if other.zmax < self.ll.z or other.zmin > self.ur.z: #self contains other in 2d space and time but not height
                         return 0
                     else: #some overlap in height
                         return 2
@@ -481,23 +481,23 @@ class Polygon4D(object):
                     #self contains other in 2d space
                     if self.zmin <= other.ll.z and self.zmax >= other.ur.z: #self contains other in height
                         return 1
-                    elif self.zmax <= other.ll.z or self.zmin >= other.ur.z: #self contains other in 2d space and time but not height
+                    elif self.zmax < other.ll.z or self.zmin > other.ur.z: #self contains other in 2d space and time but not height
                         return 0
                     else: #self contains other in 2d space and time and some overlap in height
                         return 2
                 else:#self contains other in time and some overlap in 2d space
-                    if self.zmax <= other.ll.z or self.zmin >= other.ur.z: #self contains other in 2d space and time but not height
+                    if self.zmax < other.ll.z or self.zmin > other.ur.z: #self contains other in 2d space and time but not height
                         return 0
                     else: #some overlap in height
                         return 2
-            elif self.tmax <= other.ll.t or self.tmin >= other.ur.t:
+            elif self.tmax < other.ll.t or self.tmin > other.ur.t:
                 #self and other are disjoint is time
                 return 0 
             else: #there is some overlap in time
                 if not intersects.matches(relation):
                     return 0 #self and other are disjoint in 2d space
                 else: #some overlap in 2d space
-                    if self.zmax <= other.ll.z or self.zmin >= other.ur.z: #self contains other in 2d space and time but not height
+                    if self.zmax < other.ll.z or self.zmin > other.ur.z: #self contains other in 2d space and time but not height
                         return 0
                     else: #some overlap in height
                         return 2

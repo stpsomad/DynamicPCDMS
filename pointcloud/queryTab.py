@@ -147,8 +147,7 @@ BEGIN
   WHERE GEOMETRY IS NOT NULL) t 
   set t.GEOMETRY.SDO_SRID = 28992;
   COMMIT;
-END;
-/""".format(self.queriesTable.upper()))
+END;""".format(self.queriesTable.upper()))
 
 
     def fixOrientation(self):
@@ -164,7 +163,7 @@ DECLARE
   WKTGEOM CLOB;
 
 BEGIN
-  FOR i IN 1..12 LOOP
+  FOR i IN 1..22 LOOP
     SELECT Q.TYPE INTO Q_TYPE
     FROM QUERIES Q
     WHERE Q.ID = i;
@@ -206,6 +205,7 @@ def main(config):
         #update to specified SRID
         querier.updateSRID(querier.srid)
         querier.fixOrientation()
+        querier.updateSRID(querier.srid)
         #update the geometry metadata
         querier.updateSpatialMeta()
 
