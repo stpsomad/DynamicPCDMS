@@ -40,7 +40,7 @@ class Validate:
         self.superUserName = config.get(self.db,'SuperUser') 
         self.superPassword = config.get(self.db,'SuperPass')
         
-         # Setting the tablespaces
+        # Setting the tablespaces
         self.tableSpaceSpatial = config.get('database','tableSpaceSpatial')
         self.tableSpaceIndex = config.get('database','tableSpaceIndex')
         self.tempTableSpace = config.get('database','tempTableSpace')
@@ -113,9 +113,11 @@ ADD CONSTRAINT ID_PK PRIMARY KEY (ID)
 """)
 
     def createRTree(self, cursor, tableName, indexName, dim, tablespace, numProcesses):
-        indx_parameters, dims = "", ""
-        if dims > 1:
+        if dim > 1:
             dims = "sdo_indx_dims=" + str(dim)
+        else:
+            dims = ""
+        
         indx_parameters = "PARAMETERS('" + dims + " tablespace=" + tablespace +\
         " layer_gtype=POINT sdo_rtr_pctfree=0 work_tablespace=PCWORK sdo_fanout=48')"
 
@@ -128,7 +130,12 @@ ADD CONSTRAINT ID_PK PRIMARY KEY (ID)
         os.system(command)
         
     def dropSpatialIndex(self, cursor, tableName):
-        ora.mogrifyExecute(cursor, "DROP INDEX " + tableName + "_idx")
+        command = "DROP INDEX " + tableName + "_idx"
+        ora.mogrifyExecute(cursor, command.upper())
+        
+    def dropBTreeIndex(self, cursor, tableName):
+        command = "DROP INDEX " + tableName + "_btree_idx"
+        ora.mogrifyExecute(cursor, command.upper())
     
     def createIndex(self, cursor, tableName, indexName, tableSpace, numProcesses):
         cursor.execute("""
@@ -166,6 +173,7 @@ WHERE TABLE_NAME = '""" + self.spatialTable + "'")
             ora.updateSpatialMeta(connection, self.spatialTable, 'GEOM', self.cols, self.lows, self.uppers, self.tols, self.srid)
         else:
             self.dropSpatialIndex(cursor, self.spatialTable)
+            self.dropBTreeIndex(cursor, self.spatialTable)
 
         sqlldr = self.sqlldrSpatial(self.spatialTable)
         command = """python -m pointcloud.test.las2txyz {0} | """.format(self.configFile) + sqlldr
@@ -177,14 +185,15 @@ WHERE TABLE_NAME = '""" + self.spatialTable + "'")
         #                                Indexing
         #=======================================================================#
         if self.index:
+            # Create R-Tree
             start = time.time()
             self.createRTree(cursor, self.spatialTable, self.spatialTableRTree, self.dim, self.tableSpaceIndex, self.numProcesses)
             time2 = round(time.time() - start, 4)
-            time3 = 0 # The database automatically maintains and uses indexes after they are created. 
-            if self.init:
-                start = time.time()
-                self.createIndex(cursor, self.spatialTable, self.spatialTableBTree, self.tableSpaceBtree, self.numProcesses)
-                time3 = round(time.time() - start, 4)
+            
+            #Create B-Tree
+            start = time.time()
+            self.createIndex(cursor, self.spatialTable, self.spatialTableBTree, self.tableSpaceBtree, self.numProcesses)
+            time3 = round(time.time() - start, 4)
         else:
             time2, time3 = 0, 0
         #=======================================================================#
