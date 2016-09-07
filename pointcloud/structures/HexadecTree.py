@@ -89,14 +89,11 @@ class HexadecTree:
 
             relation = self._relation(region, Tesseract(Point4D(*hexadectan[:4]), Point4D(*hexadectan[4:])))
             if relation: #1 or 2
-
                 hexadecCode = (parentCode << 4) + hexadecIndex
                 if parentLevel == maxDepth:
                         codes.append((hexadecCode, level, relation == 1, self.quadCodeToMortonRange(hexadecCode, level))) # relation = 1 indicates that this morton range is fully within query region
-                
                 else:
                     (tcodes, tc) = self._overlapCodes(maxDepth, level, hexadecCode, region, *hexadectan)
-                    
                     if tc == 16:
                         codes.append((hexadecCode, level, False, self.quadCodeToMortonRange(hexadecCode, level)))
                         c += 1

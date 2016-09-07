@@ -57,7 +57,7 @@ class Cube(object):
         """Returns the volume of the cube in the input units."""
         return (self.ur.x - self.ll.x)*(self.ur.y - self.ll.y)*(self.ur.z - self.ll.z)
         
-    def getWkt(self):
+    def wkt(self):
         """Returns the wkt of the cube when projected to the xy plane."""
         return box(self.ll.x, self.ll.y, self.ur.x, self.ur.y)
     
@@ -74,7 +74,7 @@ class Cube(object):
             if self.ll.x <= other.ll.x and self.ur.x >= other.ur.x and \
             self.ll.y <= other.ll.y and self.ur.y >= other.ur.y:
                 if self.ll.z <= other.ll.z and self.ur.z >= other.ur.z:
-                    return 1 #w ithin
+                    return 1 #within
                 elif self.ll.z >= other.ur.z or self.ur.z <= other.ll.z:
                     return 0 # disjoint
                 else:
@@ -125,15 +125,15 @@ class Cube(object):
             """Relationship of a cube and a 3D polygon. 
             
             Uses the 2D intersection model to establish the relationship."""
-            geom1, minz, maxz = self.getWkt(), self.ll.z, self.ur.z
-            relation = geom1.relate(other.wkt) #relationship in 2D
+            geom1, geom2 = self.wkt(), other.wkt
+            relation = geom1.relate(geom2) #relationship in 2D
             
             if not intersects.matches(relation):
                 return 0 # disjoint
             elif contains.matches(relation):
-                if  minz <= other.zmin <= maxz and minz <= other.zmax <= maxz:
+                if  self.ll.z <= other.zmin <= self.ur.z and self.ll.z <= other.zmax <= self.ur.z:
                     return 1 # within
-                elif maxz < other.zmin or minz > other.zmax:
+                elif self.ur.z < other.zmin or self.ll.z > other.zmax:
                     return 0 # disjoint
                 else:
                     return 2 # disjoint
@@ -141,7 +141,7 @@ class Cube(object):
                 if excluding_interiors.matches(relation):
                     return 0 # overlap only in boundaries, we do not count it
                 else:
-                    if maxz < other.zmin or minz > other.zmax:
+                    if self.ur.z < other.zmin or self.ll.z > other.zmax:
                         return 0 # disjoint
                     else:
                         return 2 # some interior of geom2 is in geom1
@@ -160,6 +160,10 @@ class Polygon3D(object):
     def volume(self):
         """Returns the volume of the Polygon."""
         return self.wkt.area * (self.zmax - self.zmin)
+    
+    def area2D(self):
+        """Returns the area of the Polygon in 2D (xy plane)"""
+        return self.wkt.area
         
     def relationship(self, other):
         """ Relationship between a 3D polygon and a cube.
@@ -172,16 +176,15 @@ class Polygon3D(object):
             """Relationship of a 3D polygon and a cube. 
             
             Uses the 2D intersection model to establish the relationship."""
-            geom2 = other.getWkt() 
-            geom1, minz, maxz = self.wkt, self.zmin, self.zmax
+            geom1, geom2 = self.wkt, other.wkt() 
             relation = geom1.relate(geom2) #relationship in 2D
             
             if not intersects.matches(relation):
                 return 0 # disjoint
             elif contains.matches(relation):
-                if  minz <= other.ll.z <= maxz and minz <= other.ur.z <= maxz:
+                if  self.zmin <= other.ll.z <= self.zmax and self.zmin <= other.ur.z <= self.zmax:
                     return 1 # within
-                elif maxz < other.ll.z or minz > other.ur.z:
+                elif self.zmax < other.ll.z or self.zmin > other.ur.z:
                     return 0 # disjoint
                 else:
                     return 2 # disjoint
@@ -189,7 +192,7 @@ class Polygon3D(object):
                 if excluding_interiors.matches(relation):
                     return 0 # overlap only in boundaries, we do not count it
                 else:
-                    if maxz < other.ll.z or minz > other.ur.z:
+                    if self.zmax < other.ll.z or self.zmin > other.ur.z:
                         return 0 # disjoint
                     else:
                         return 2 # some interior of geom2 is in geom1
@@ -277,8 +280,10 @@ class dynamicCube(object):
             
             Uses the 2D DE9IM topological relationships in order to check the x and y dimensions.
             It is assumed that the time dimension will be given as upper - lower boundary."""
-            geom1 = self.wkt2D()
-            relation = geom1.relate(other.wkt)
+            geom1, geom2 = self.wkt2D(), other.wkt
+            relation = geom1.relate(geom2) #2D relationship
+            
+            #Refine in the 3rd dimension
             if other.tmin >= self.ll.t and other.tmax <= self.ur.t: #self contains other in time
                 if not intersects.matches(relation):
                     #self and other are disjoint in space
@@ -317,9 +322,10 @@ class dynamicPolygon(object):
         * within (returns 1)
         * overlap (returns 2)"""
         if isinstance(other, dynamicCube):
-            geom2 = other.wkt2D()
-            relation = self.wkt.relate(geom2)
+            geom1, geom2 = self.wkt, other.wkt2D()
+            relation = geom1.relate(geom2) #relate in 2D
             
+            #refine in the time dimensions
             if self.tmin <= other.ll.t <= self.tmax and self.tmax >= other.ur.t >= self.tmin: #self contains other in time
                 if not intersects.matches(relation):
                     #self and other are disjoint in space
@@ -418,8 +424,10 @@ class Tesseract(object):
             
             Uses the 2D DE9IM topological relationships in order to check the x and y dimensions.
             It is assumed that the z and time dimension will be given as upper - lower boundary."""
-            geom1 = self.wkt2D()
-            relation = geom1.relate(other.wkt)
+            geom1,geom2 = self.wkt2D(), other.wkt
+            relation = geom1.relate(geom2) # relationship in xy dimensions
+            
+            #refine in time and z
             if other.tmin >= self.ll.t and other.tmax <= self.ur.t: #self contains other in time
                 if not intersects.matches(relation):
                     #self and other are disjoint in space
@@ -471,8 +479,9 @@ class Polygon4D(object):
         * within (returns 1)
         * overlap (returns 2)""" 
         if isinstance(other, Tesseract):
-            geom2 = other.wkt2D()
-            relation = self.wkt.relate(geom2)
+            geom1, geom2 = self.wkt, other.wkt2D()
+            relation = geom1.relate(geom2)
+            
             if self.tmin <= other.ll.t and self.tmax >= other.ur.t: #self contains other in time
                 if not intersects.matches(relation):
                     #self and other are disjoint in space
@@ -507,4 +516,6 @@ class Polygon4D(object):
         """Returns the 4- or 3- volume depending on the conditions."""
         if self.tmax - self.tmin == 0:
             return self.wkt.area * (self.zmax - self.zmin)
+        elif self.zmax - self.zmin == 0:
+            return self.wkt.area * (self.tmax - self.tmin)
         return self.wkt.area * (self.zmax - self.zmin) * (self.tmax - self.tmin)     

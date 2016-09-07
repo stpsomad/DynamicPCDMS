@@ -117,7 +117,7 @@ class QuadTree:
         if numLevels == None:
             numLevels = self.numLevels
         if (numLevels == 'auto') or (numLevels < 0):
-            numLevels = math.ceil(math.log(self.domainRegion.area / region.area, 2)) + coarser
+            numLevels = math.ceil(math.log(self.domainRegion.area / region.area, 2)) + coarser # add coarser to go deeper
         if box(*self.startQuad).intersects(region):
             return self._overlapCodes(numLevels, self.startLevel, self.startQuadCode, region, *self.startQuad)[0], numLevels
         return [], numLevels
@@ -190,7 +190,7 @@ class QuadTree:
         maxy = morton.DecodeMorton2DY(maxr)
         return (minx,miny,maxx+1,maxy+1)
     
-    def getMortonRanges(self, wkt, coarser, continuous = False, distinctIn = False, numLevels = None, maxRanges = None):
+    def getMortonRanges(self, wkt, coarser=1, continuous = False, distinctIn = False, numLevels = None, maxRanges = None):
         codes, Levels = self.overlapCodes(loads(wkt), coarser, numLevels)
         if distinctIn:
             (imranges, xmranges) = self.getDiffRanges(codes)
