@@ -14,22 +14,23 @@ import os
 
 ###########################
 dataset = 'zandmotor'
-integrations = ['dxyt', 'dxyzt']
-scaling = '1000'
+integrations = ['dxyzt']
+scaling = '10000'
 repeatQueries = 6
+queryID = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 ###########################
 
 if dataset == 'zandmotor':
-    bench = 1
+    bench = 3
 elif dataset == 'coastline':
     bench = 1
     
 path = os.getcwd()
 benchmark = ['mini', 'medium', 'full']  
 hloading = ['approach', 'preparation', 'loading', 'closing', 'size[MB]', 'points']
-hquery =  ["id", "prep.", 'insert', 'ranges', 'Levels', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
+hquery = ["id", "preparation", "filter", 'decode+store', 'refinement', 'ranges', "Appr.pts", "Fin.pts", 'extra%', 'total', 'query']
 
-fh = open('integrated_scale1000_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
+fh = open('cpp_{0}.txt'.format(time.strftime("%d%m%Y")), 'a')
 fh.write('Benchmark executed on ')
 fh.write(time.strftime("%d/%m/%Y"))
 fh.write('\n')
@@ -45,6 +46,7 @@ Remarks:
     * The queries are repeated 6 times.
 
 --START--\n\n\n""")
+
 
 for integr in integrations:
     loadings = []
@@ -76,7 +78,7 @@ for integr in integrations:
         loading.append(int(points))
         
         loadings.append(loading)
-        
+
         #========================================================================
         #                              Querying Phase
         #========================================================================
@@ -89,18 +91,20 @@ for integr in integrations:
         if not length:
             os.system('python -m pointcloud.queryTab {0}'.format(configuration))
 
-        for num in querier.ids:
+        for num in queryID:
+            num = str(num)
             for j in range(repeatQueries):
                 start = time.time()
                 lst = querier.query(num)
                 lst.append(round(time.time() - start, 2))
-                lst.append(round((lst[7] - lst[8])/float(lst[8])*100, 2))
-                lst.append(round(lst[1] + lst[4] + lst[5] + lst[6] + lst[9], 2))
+                lst.append(round(lst[0]+lst[1],2))
                 lst.insert(0, num)
                 queries.append(lst)
-                ora.dropTable(cursor, querier.queryTable + '_' +  str(num))               
-            ora.dropTable(cursor, querier.rangeTable + str(num))
-        
+                ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
+                ora.dropTable(cursor, querier.filterTable + str(num))
+                ora.dropTable(cursor, querier.rangeTable + str(num))
+                print tabulate([lst], tablefmt="plain")
+
     print
     print 'integration: {0}\n\n'.format(integr)
     print

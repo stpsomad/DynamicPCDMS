@@ -14,12 +14,12 @@ import os
 ###   Setup Variables   ###
 ###########################
 dataset = 'zandmotor'
-integrations = ['lxyt']
-scalings = ['1']
+integrations = ['dxyzt']
+scalings = ['10000']
 ###########################
 
 if dataset == 'zandmotor':
-    bench = 3
+    bench = 1
 elif dataset == 'coastline':
     bench = 4 
 
@@ -33,7 +33,7 @@ for integr in integrations:
         loadings = []
         queries = []
         for i in range(1,bench + 1):
-            configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + "_8_False_part" + str(i) + '.ini'
+            configuration = path + '/ini/' + dataset + '/' + integr + '_' + scaling + "_0_False_part" + str(i) + '.ini'
 
             bulk = BulkLoader(configuration)
             loading = []

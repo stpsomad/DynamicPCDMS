@@ -7,7 +7,7 @@ Created on Fri May 06 14:11:41 2016
 import os
 import time
 from tabulate import tabulate
-from pointcloud.AbstractQuerier import Querier
+from pointcloud.cppQuerierOnlySFC import Querier
 import pointcloud.oracleTools as ora
 
 
@@ -15,11 +15,12 @@ import pointcloud.oracleTools as ora
 ###   Setup Variables   ###
 ###########################
 dataset = 'zandmotor'
-case = 'dxyzt_1_0_False_part1'
-repeat = 2
+case = 'dxyzt_10000_0_False_part1'
+repeat = 1
+queryID = [1,3,4,5,6,7,8,9,10,11,12]
 ###########################
 
-hquery =  ["id", "prep.", 'insert', 'ranges', 'Levels', 'fetching', "decoding", 'storing', "Appr.pts", "Fin.pts", "FinFilt", "time", 'extra%', 'total']
+hquery =  ["id", "preparation", "filter", 'decode+store', 'refinement', 'ranges', "Appr.pts", "Fin.pts", 'extra%', 'total', 'query']
 queries = []
 
 path = os.getcwd()
@@ -34,21 +35,18 @@ length = len(cursor.fetchall())
 if not length:
     os.system('python -m pointcloud.queryTab {0}'.format(configuration))
 
-for num in querier.ids:
+for num in queryID:
+    num = str(num)
     for j in range(repeat):
         start = time.time()
         lst = querier.query(num)
         lst.append(round(time.time() - start, 2))
-        if lst[8] != 0:
-            lst.append(round((lst[7] - lst[8])/float(lst[8])*100,2))
-        else:
-            lst.append(-9999)
-        lst.append(round(lst[1]+lst[4]+lst[5]+lst[6]+lst[9],2))
+        lst.append(round(lst[0]+lst[1],2))
         lst.insert(0, num)
         queries.append(lst)
         ora.dropTable(cursor, querier.queryTable + '_' +  str(num))
-        print tabulate([lst], hquery, tablefmt="plain")
-    if querier.integration == 'deep' or querier.method == 'join':
+        ora.dropTable(cursor, querier.filterTable + str(num))
         ora.dropTable(cursor, querier.rangeTable + str(num))
+        print tabulate([lst], hquery, tablefmt="plain")
 print
 print tabulate(queries, hquery, tablefmt="plain")
